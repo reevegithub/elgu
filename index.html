@@ -398,12 +398,7 @@
       
       <div class="flex flex-col w-full md:w-auto">
         <label class="text-[9px] font-bold uppercase text-slate-400 mb-1">Apps Script URL (Backend)</label>
-        <input type="text" id="apiUrl" placeholder="https://script.google.com/..." class="text-xs bg-slate-700 border border-slate-600 rounded px-4 py-2 w-full md:w-80 outline-none focus:ring-2 ring-blue-500">
-      </div>
-
-      <div class="flex flex-col w-full md:w-auto">
-        <label class="text-[9px] font-bold uppercase text-slate-400 mb-1">Gemini API Key</label>
-        <input type="password" id="aiKeyInput" placeholder="AIza..." class="text-xs bg-slate-700 border border-slate-600 rounded px-4 py-2 w-full md:w-48 outline-none focus:ring-2 ring-blue-500">
+        <input type="text" id="apiUrl" placeholder="https://script.google.com/..." class="text-xs bg-slate-700 border border-slate-600 rounded px-4 py-2 w-full md:w-96 outline-none focus:ring-2 ring-blue-500">
       </div>
 
       <button onclick="saveSettings()" class="bg-dict-blue hover:bg-blue-600 text-white text-xs font-black px-6 py-2 rounded shadow transition mt-auto h-9">CONNECT</button>
@@ -412,9 +407,9 @@
 
  <script>
     /* --- CONFIGURATION --- */
-    const DOWNLOAD_URL = ""; 
+    const DOWNLOAD_URL = "https://drive.google.com/drive/folders/1qA2OZqQSDru05aIzgFPhCGicESXp22u1"; 
     const CURRENT_VERSION = "1.10"; 
-    // FIXED_AI_KEY removed. Key now comes from LocalStorage.
+    // FIXED_AI_KEY REMOVED (Handled in Backend now)
 
     let LIVE_DB = [], CURRENT_VIEW_DB = [], API_URL = localStorage.getItem('elgu_api_url') || '';
     let activeFilter = 'All', map = null, markers = [];
@@ -507,10 +502,6 @@
       if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
       document.getElementById('downloadLink').href = DOWNLOAD_URL; 
       
-      // Load saved API Key into the Settings input
-      const savedKey = localStorage.getItem('elgu_ai_key') || '';
-      document.getElementById('aiKeyInput').value = savedKey;
-
       if (API_URL) {
         document.getElementById('apiUrl').value = API_URL;
         initData();
@@ -792,22 +783,12 @@
       });
     }
 
-    /* --- UPDATED AI FUNCTION: Sends actual data rows --- */
+    /* --- UPDATED AI FUNCTION: Backend now handles the Key --- */
     async function sendChat() {
       const i = document.getElementById('chatInput'); const txt = i.value.trim(); if (!txt) return;
       const c = document.getElementById('chatContainer');
       const userDiv = document.createElement('div'); userDiv.className = "user-msg chat-bubble self-end animate-slide-in"; userDiv.innerText = txt; c.appendChild(userDiv); i.value = '';
       
-      // CHECK FOR API KEY
-      const apiKey = localStorage.getItem('elgu_ai_key');
-      if (!apiKey) {
-          const errDiv = document.createElement('div'); 
-          errDiv.className = "ai-msg chat-bubble text-red-500 border-red-200 bg-red-50"; 
-          errDiv.innerHTML = '<b>Configuration Missing:</b> Please click the gear icon <i class="fa-solid fa-gear"></i> and enter your Gemini API Key.'; 
-          c.appendChild(errDiv); c.scrollTop = c.scrollHeight;
-          return;
-      }
-
       const loader = document.createElement('div'); loader.className = "ai-msg chat-bubble"; loader.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Analyzing...'; c.appendChild(loader); c.scrollTop = c.scrollHeight;
       
       // BUILD CONTEXT WITH ACTUAL DATA ROWS
@@ -834,7 +815,7 @@
             method: 'POST',
             body: JSON.stringify({
               action: 'askAI',
-              key: apiKey,
+              // KEY IS NO LONGER SENT HERE
               prompt: context
             })
           });
@@ -1013,10 +994,9 @@
       openModal('modalEdit');
     }
     
-    // --- UPDATED saveSettings: Saves API Key now ---
+    // --- UPDATED saveSettings ---
     function saveSettings() {
        localStorage.setItem('elgu_api_url', document.getElementById('apiUrl').value.trim());
-       localStorage.setItem('elgu_ai_key', document.getElementById('aiKeyInput').value.trim()); // Save AI Key
        location.reload(); 
     }
 
