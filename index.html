@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title id="pageTitle">eLGU Monitoring System</title>
+  <link rel="icon" type="image/png" href="https://files.e.gov.ph/elgu/9c1a30c1-fd98-4bff-9548-01024c0efd8c.png">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            dict: { blue: '#003399', red: '#CE1126', yellow: '#FDC116' },
+            slate: { 850: '#1e293b', 900: '#0f172a' }
+          },
+          animation: { 'slide-in': 'slideIn 0.3s ease-out' },
+          keyframes: { slideIn: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(0)' } } }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+    * { transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+    .glass-panel { background: white; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .dark .glass-panel { background: #1e293b; border-color: #334155; }
+
+    .nav-tab.active { background: #003399; color: white; border-color: #003399; }
+    .dark .nav-tab.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+
+    .sb-btn { width: 100%; text-align: left; padding: 12px 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; border-radius: 12px; color: #64748b; background: transparent; cursor: pointer; margin-bottom: 4px; }
+    .dark .sb-btn { color: #94a3b8; }
+    .sb-btn:hover { background: #f1f5f9; }
+    .dark .sb-btn:hover { background: #334155; }
+    .sb-btn.active { background: #eff6ff; color: #003399; font-weight: 800; }
+    .dark .sb-btn.active { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    
+    .sb-pill { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #e2e8f0; color: #475569; }
+    .dark .sb-pill { background: #334155; color: #cbd5e1; }
+
+    .section-header { background: #f8fafc; color: #475569; padding: 8px 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; border-radius: 6px; margin-top: 16px; margin-bottom: 10px; border-left: 3px solid #003399; display: flex; align-items: center; gap: 8px; }
+    .dark .section-header { background: #0f172a; color: #94a3b8; border-left-color: #3b82f6; }
+
+    .badge { font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; white-space: nowrap; }
+
+    .modal { opacity: 0; pointer-events: none; transform: scale(0.95); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); z-index: 120; }
+    .modal.active { opacity: 1; pointer-events: auto; transform: scale(1); }
+
+    #map { height: 100%; width: 100%; border-radius: 0.75rem; z-index: 1; }
+    #view-map { min-height: 400px; }
+
+    .chart-expand-btn { position: absolute; top: 12px; right: 12px; color: #94a3b8; cursor: pointer; padding: 6px; border-radius: 6px; font-size: 14px; background: transparent; z-index: 10; transition: all 0.2s; }
+    .chart-expand-btn:hover { background: #f1f5f9; color: #003399; transform: scale(1.1); }
+
+    .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 0.9rem; margin-bottom: 12px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .user-msg { background: #003399; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+    .ai-msg { background: white; color: #334155; align-self: flex-start; border: 1px solid #e2e8f0; border-bottom-left-radius: 2px; }
+    .dark .ai-msg { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+
+    /* Mobile Drawer */
+    .mobile-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 50; }
+    .mobile-drawer.open { transform: translateX(0); }
+    .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+  </style>
+</head>
+
+<body class="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
+
+  <div id="forceUpdateModal" class="fixed inset-0 z-[9999] hidden flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-md p-6 text-center animate-in fade-in duration-300">
+    <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-700 transform transition-all scale-100">
+      <div class="w-20 h-20 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+        <i class="fa-solid fa-cloud-arrow-down text-4xl text-dict-blue dark:text-blue-400 animate-bounce"></i>
+      </div>
+      <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-2">Update Required</h2>
+      <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">
+        A newer version is available.
+      </p>
+      <a id="downloadLink" href="#" target="_blank" class="block w-full bg-dict-blue hover:bg-blue-700 text-white font-black text-sm py-4 rounded-xl shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.02] active:scale-[0.98] mb-4">
+        DOWNLOAD LATEST VERSION
+      </a>
+      <p class="text-[10px] text-slate-400 font-mono">Current: v1.10 <span class="mx-2">•</span> <span id="remoteVersionDisplay">Checking...</span></p>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="fixed inset-0 bg-white/90 dark:bg-slate-950/90 z-[150] hidden flex flex-col items-center justify-center backdrop-blur-sm">
+    <div class="w-12 h-12 border-4 border-slate-200 border-t-dict-blue rounded-full animate-spin mb-4"></div>
+    <div id="loaderText" class="text-xs font-black text-dict-blue dark:text-blue-400 animate-pulse uppercase tracking-widest">Syncing Data...</div>
+  </div>
+
+  <div class="md:hidden h-16 bg-white dark:bg-slate-900 border-b dark:border-slate-800 flex items-center justify-between px-4 shrink-0 z-30">
+      <button onclick="toggleDrawer()" class="p-2 text-slate-500"><i class="fa-solid fa-bars text-xl"></i></button>
+      <span class="font-black text-dict-blue dark:text-blue-400">eLGU Monitoring</span>
+      <button onclick="switchTab('ai')" class="p-2 text-indigo-600"><i class="fa-solid fa-sparkles"></i></button>
+  </div>
+
+  <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-16 hidden md:flex items-center justify-between px-6 z-30 shrink-0 shadow-sm">
+    <div class="flex items-center gap-4">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/a/aa/DICT-Logo-icon_only.png" class="h-10 w-auto">
+      <div class="h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
+      <img src="https://files.e.gov.ph/elgu/9c1a30c1-fd98-4bff-9548-01024c0efd8c.png" class="h-8 w-auto">
+      <div class="ml-2">
+        <h1 class="text-xl font-black text-dict-blue dark:text-blue-400 leading-tight tracking-tighter">eLGU Monitoring System</h1>
+        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">v1.10</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div id="statusIndicator" class="hidden flex items-center gap-2 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1.5 rounded-full border border-green-200 dark:border-green-900 text-[10px] font-bold">
+        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> <span id="statusText">Live</span>
+      </div>
+      <button onclick="toggleTheme()" class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition"><i class="fa-solid fa-moon dark:hidden text-slate-500"></i><i class="fa-solid fa-sun hidden dark:block text-slate-400"></i></button>
+      <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+      <button onclick="switchTab('dash')" id="btn-dash" class="nav-tab active bg-dict-blue text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">Dashboard</button>
+      <button onclick="switchTab('map')" id="btn-map" class="nav-tab bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition">Map</button>
+      <button onclick="switchTab('ai')" id="btn-ai" class="nav-tab bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md hover:from-violet-500 hover:to-indigo-500 transition flex gap-2 items-center"><i class="fa-solid fa-sparkles"></i> AI Agent</button>
+      <button onclick="toggleSettings()" class="text-slate-400 hover:text-dict-blue transition p-2 ml-2"><i class="fa-solid fa-gear"></i></button>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden relative">
+    <div id="drawerOverlay" class="drawer-overlay md:hidden" onclick="toggleDrawer()"></div>
+
+    <aside id="sidebar" class="mobile-drawer md:relative md:translate-x-0 md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-50 shadow-2xl md:shadow-none">
+      <div class="p-4 md:hidden flex justify-between items-center border-b dark:border-slate-800">
+          <span class="font-black">Menu</span>
+          <button onclick="toggleDrawer()"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+      <div class="p-6 flex-1 overflow-y-auto">
+        
+        <div class="md:hidden mb-6 pb-6 border-b border-slate-100 dark:border-slate-800 space-y-2">
+           <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Navigation</div>
+           <div class="grid grid-cols-2 gap-2">
+              <button onclick="switchTab('ai'); toggleDrawer()" class="col-span-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-sparkles"></i> Open AI Data Analyst</button>
+              <button onclick="switchTab('dash'); toggleDrawer()" class="bg-blue-50 dark:bg-blue-900/20 text-dict-blue dark:text-blue-400 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-chart-pie"></i> Dashboard</button>
+              <button onclick="switchTab('map'); toggleDrawer()" class="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs border dark:border-slate-700 flex items-center justify-center gap-2"><i class="fa-solid fa-map"></i> Map</button>
+              <button onclick="toggleTheme()" class="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs border dark:border-slate-700 flex items-center justify-center gap-2"><i class="fa-solid fa-circle-half-stroke"></i> Theme</button>
+              <button onclick="toggleSettings(); toggleDrawer()" class="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs border dark:border-slate-700 flex items-center justify-center gap-2"><i class="fa-solid fa-gear"></i> Settings</button>
+           </div>
+        </div>
+
+        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2">Filter by Province</div>
+        <div id="sidebar-nav" class="space-y-1"></div>
+        <div id="snapshotBanner" class="hidden mt-6 p-4 rounded-xl border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-900/40">
+          <div class="flex flex-col gap-2">
+            <div><div class="text-[9px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Snapshot</div><div id="snapshotName" class="text-xs font-bold text-orange-900 dark:text-orange-200 mt-1 truncate">—</div></div>
+            <button onclick="exitSnapshotMode()" class="w-full py-1.5 rounded-lg text-[10px] font-black bg-white dark:bg-slate-800 border border-orange-200 dark:border-slate-700 hover:bg-orange-50 transition text-orange-700 dark:text-orange-300">Back to Live</button>
+          </div>
+        </div>
+      </div>
+      <div class="p-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-2">
+        <button onclick="saveSnapshot()" class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-dict-blue dark:hover:border-blue-500 text-slate-600 dark:text-slate-300 font-black text-xs py-3 rounded-xl shadow-sm flex items-center justify-center gap-2 transition"><i class="fa-solid fa-floppy-disk"></i> Save Report</button>
+        <button onclick="openModal('modalHistory')" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-black text-xs py-3 rounded-xl shadow flex items-center justify-center gap-2 transition"><i class="fa-solid fa-clock-rotate-left"></i> History / Compare</button>
+      </div>
+    </aside>
+
+    <main id="view-dash" class="view-section flex-1 bg-slate-50 dark:bg-slate-950 p-4 md:p-8 overflow-y-auto pb-24">
+      <div id="compareBanner" class="hidden bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-900/50 p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row justify-between md:items-center gap-3 relative overflow-hidden">
+        <div class="absolute left-0 top-0 bottom-0 w-1 bg-orange-500"></div>
+        <div class="pl-2">
+          <h3 class="font-black text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-orange-600"><i class="fa-solid fa-scale-balanced text-xs"></i></span> Comparison Active</h3>
+          <p class="text-xs text-slate-500 mt-1" id="compareLabels"></p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="openModal('modalCompare')" class="bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 text-xs font-black px-4 py-2 rounded-lg text-orange-700 dark:text-orange-300 transition hover:bg-orange-100">View Analytics</button>
+          <button onclick="exitCompareMode()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-black px-4 py-2 rounded-lg text-slate-600 dark:text-slate-300 transition hover:bg-slate-50">Exit</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div class="glass-panel p-4 border-l-4 border-slate-500"><p class="text-[10px] font-black uppercase text-slate-400 mb-1">Total LGUs</p><h2 class="text-2xl font-black" id="kpi-total">0</h2></div>
+        <div class="glass-panel p-4 border-l-4 border-green-500"><p class="text-[10px] font-black uppercase text-slate-400 mb-1">Operational</p><h2 class="text-2xl font-black" id="kpi-op">0</h2></div>
+        <div class="glass-panel p-4 border-l-4 border-blue-500"><p class="text-[10px] font-black uppercase text-slate-400 mb-1">Developmental</p><h2 class="text-2xl font-black" id="kpi-dev">0</h2></div>
+        <div class="glass-panel p-4 border-l-4 border-yellow-500"><p class="text-[10px] font-black uppercase text-slate-400 mb-1">With LOI</p><h2 class="text-2xl font-black" id="kpi-loi">0</h2></div>
+        <div class="glass-panel p-4 border-l-4 border-red-500"><p class="text-[10px] font-black uppercase text-slate-400 mb-1">No LOI</p><h2 class="text-2xl font-black" id="kpi-no">0</h2></div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div class="glass-panel p-5 relative">
+          <button class="chart-expand-btn" onclick="maximizeChart('pie')"><i class="fa-solid fa-expand"></i></button>
+          <h3 class="text-xs font-black text-slate-400 uppercase mb-4">Status Overview</h3>
+          <div class="h-48"><canvas id="chartPie"></canvas></div>
+        </div>
+        <div class="glass-panel p-5 relative">
+          <button class="chart-expand-btn" onclick="maximizeChart('year')"><i class="fa-solid fa-expand"></i></button>
+          <h3 class="text-xs font-black text-slate-400 uppercase mb-4">Timeline (Status Breakdown)</h3>
+          <div class="h-48"><canvas id="chartYear"></canvas></div>
+        </div>
+        <div class="glass-panel p-5 relative">
+          <button class="chart-expand-btn" onclick="maximizeChart('bar')"><i class="fa-solid fa-expand"></i></button>
+          <h3 class="text-xs font-black text-slate-400 uppercase mb-4">Provincial Breakdown</h3>
+          <div class="h-48"><canvas id="chartBar"></canvas></div>
+        </div>
+      </div>
+
+      <div class="glass-panel flex flex-col min-h-[500px]">
+        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col md:flex-row gap-3 items-center sticky top-0 z-20 rounded-t-2xl">
+          <h3 class="font-black text-sm flex items-center gap-2"><i class="fa-solid fa-list text-slate-400"></i> Master List</h3>
+          <div class="flex flex-col md:flex-row gap-2 ml-auto w-full md:w-auto">
+            <select id="filterStatus" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-slate-50 dark:bg-slate-800 outline-none w-full md:w-32 focus:ring-1 ring-blue-500">
+              <option value="All">All Status</option><option value="Operational">Operational</option><option value="Developmental">Developmental</option><option value="With LOI">With LOI</option><option value="No LOI">No LOI</option>
+            </select>
+            <select id="filterYear" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-slate-50 dark:bg-slate-800 outline-none w-full md:w-32 focus:ring-1 ring-blue-500"><option value="All">All Years</option></select>
+            <div class="relative w-full md:w-48"><i class="fa-solid fa-search absolute left-3 top-2 text-slate-400 text-xs"></i><input type="text" id="searchBox" onkeyup="resetPg();applyFilters()" placeholder="Search LGUs..." class="pl-8 pr-4 py-1.5 bg-slate-50 dark:bg-slate-800 border rounded-lg text-xs outline-none w-full focus:ring-1 ring-blue-500"></div>
+          </div>
+        </div>
+        <div class="overflow-x-auto flex-1 w-full relative">
+          <table class="w-full text-left text-sm border-collapse">
+            <thead class="bg-slate-50 dark:bg-slate-900 text-[10px] text-slate-500 uppercase font-black border-b border-slate-100 dark:border-slate-800 sticky top-0 z-10">
+              <tr>
+                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortData('Province')">Province <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortData('Municipality')">Municipality <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortData('Status')">Status <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th class="px-6 py-4">Op. Date</th>
+                <th class="px-6 py-4">Remarks</th>
+                <th class="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+          </table>
+        </div>
+        <div class="px-5 py-3 border-t bg-slate-50 dark:bg-slate-900 flex justify-between items-center text-xs font-black rounded-b-2xl shrink-0">
+          <div class="text-slate-500"><span id="pgStart">0</span>-<span id="pgEnd">0</span> of <span id="pgTotal">0</span></div>
+          <div class="flex gap-2">
+            <button onclick="changePg(-1)" class="px-3 py-1 rounded bg-white dark:bg-slate-800 border shadow-sm transition hover:bg-slate-100">PREV</button>
+            <button onclick="changePg(1)" class="px-3 py-1 rounded bg-white dark:bg-slate-800 border shadow-sm transition hover:bg-slate-100">NEXT</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <main id="view-map" class="view-section hidden flex-1 relative bg-slate-100">
+      <div id="map" class="h-full w-full"></div>
+      <div class="absolute bottom-24 left-4 md:bottom-8 bg-white dark:bg-slate-900 p-4 rounded-xl shadow-xl z-[999] text-[10px] border dark:border-slate-700 w-auto max-w-[200px]">
+        <div class="font-black mb-3 uppercase text-slate-500 tracking-widest border-b pb-2">Status Legend</div>
+        <div class="grid grid-cols-1 gap-2">
+           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:#22c55e; box-shadow: 0 0 4px #22c55e"></span> Operational</div>
+           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:#3b82f6; box-shadow: 0 0 4px #3b82f6"></span> Developmental</div>
+           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:#f59e0b; box-shadow: 0 0 4px #f59e0b"></span> With LOI</div>
+           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:#ef4444; box-shadow: 0 0 4px #ef4444"></span> No LOI</div>
+        </div>
+      </div>
+    </main>
+
+    <main id="view-ai" class="view-section hidden flex-1 flex flex-col p-2 md:p-8 bg-slate-50 dark:bg-slate-950 overflow-hidden h-full">
+      <div class="max-w-4xl mx-auto w-full h-full flex flex-col">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex-1 shadow-sm overflow-hidden flex flex-col">
+            <div class="p-4 border-b bg-slate-50 dark:bg-slate-950 text-xs font-black uppercase text-slate-500 tracking-widest">AI Data Analyst</div>
+            <div id="chatContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-slate-900/50"></div>
+            <div class="p-4 bg-white dark:bg-slate-900 border-t flex items-center gap-3">
+                <input type="text" id="chatInput" placeholder="Ask about the data..." class="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl outline-none text-sm focus:ring-2 ring-indigo-500 transition" onkeypress="if(event.key==='Enter')sendChat()">
+                <button onclick="sendChat()" class="bg-indigo-600 text-white w-12 h-12 rounded-xl hover:bg-indigo-700 transition flex items-center justify-center shadow-lg shadow-indigo-500/20"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modalHistory" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm modal p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="p-5 border-b bg-slate-50 dark:bg-slate-900 flex justify-between items-center font-black text-slate-800 dark:text-white">History & Comparison <button onclick="closeModal('modalHistory')"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="p-6 overflow-y-auto">
+         <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/50">
+            <h4 class="text-xs font-black uppercase text-blue-600 dark:text-blue-400 mb-3">Compare Snapshots</h4>
+            <div class="flex flex-col md:flex-row gap-3 items-end">
+               <div class="flex-1 w-full"><label class="text-[10px] font-bold text-slate-400 block mb-1">Baseline (A)</label><select id="compareA" class="w-full text-xs p-2 rounded border bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-white"></select></div>
+               <div class="flex-1 w-full"><label class="text-[10px] font-bold text-slate-400 block mb-1">Comparison (B)</label><select id="compareB" class="w-full text-xs p-2 rounded border bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-white"></select></div>
+               <button onclick="runComparison()" class="bg-dict-blue hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold w-full md:w-auto mt-2 md:mt-0">COMPARE</button>
+            </div>
+         </div>
+         <h4 class="text-xs font-black uppercase text-slate-400 mb-3">Saved Snapshots</h4>
+         <table class="w-full text-left border-collapse"><tbody id="historyList" class="divide-y divide-slate-100 dark:divide-slate-800 text-sm text-slate-700 dark:text-slate-300"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalCompare" class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/95 backdrop-blur-md modal p-4 overflow-y-auto">
+      <div class="bg-slate-50 dark:bg-slate-950 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="p-6 border-b bg-white dark:bg-slate-900 flex justify-between items-center sticky top-0 z-20 shrink-0">
+           <div><h2 class="text-xl font-black text-slate-800 dark:text-white">Comparison Analysis</h2><p class="text-xs text-slate-400" id="cmpSubtitle">Loading...</p></div>
+           <button onclick="closeModal('modalCompare')" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1">
+           <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800"><div class="text-[10px] uppercase font-black text-slate-400 mb-2">Total Changes</div><div class="text-4xl font-black text-dict-blue dark:text-blue-400" id="cmpChangedBig">0</div></div>
+              <div class="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4" id="cmpStatGrid"></div>
+           </div>
+           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 h-64 relative"><h4 class="text-xs font-black text-center mb-4 text-slate-600 dark:text-slate-300" id="cmpLabelA">Snapshot A</h4><div class="h-48"><canvas id="cmpChartA"></canvas></div></div>
+              <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 h-64 relative"><h4 class="text-xs font-black text-center mb-4 text-slate-600 dark:text-slate-300" id="cmpLabelB">Snapshot B</h4><div class="h-48"><canvas id="cmpChartB"></canvas></div></div>
+           </div>
+           <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+              <div class="p-4 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950">
+                  <h3 class="font-bold text-sm text-slate-700 dark:text-slate-200">Status Changes Detected</h3>
+                  <div class="flex gap-2">
+                      <button onclick="viewAllChanges()" class="text-[10px] font-bold bg-slate-200 dark:bg-slate-700 border dark:border-slate-600 px-3 py-1 rounded hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200">VIEW FULL LIST</button>
+                      <button onclick="exportChangedCSV()" class="text-[10px] font-bold bg-white dark:bg-slate-800 border dark:border-slate-700 px-3 py-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">EXPORT CSV</button>
+                  </div>
+              </div>
+              <div class="max-h-[300px] overflow-y-auto">
+                  <table class="w-full text-left text-sm">
+                      <thead class="text-[10px] uppercase text-slate-400 bg-slate-50 dark:bg-slate-950 sticky top-0 z-10 border-b dark:border-slate-800 shadow-sm">
+                          <tr><th class="px-5 py-3">LGU</th><th class="px-5 py-3">Old Status</th><th class="px-5 py-3">New Status</th><th class="px-5 py-3 text-right">Action</th></tr>
+                      </thead>
+                      <tbody id="cmpChangedTableFull"></tbody>
+                  </table>
+              </div>
+           </div>
+        </div>
+     </div>
+  </div>
+
+  <div id="modalAllChanges" class="fixed inset-0 z-[115] flex items-center justify-center bg-slate-900/95 backdrop-blur-md modal p-4">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden">
+        <div class="p-5 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950">
+            <div class="font-black text-slate-800 dark:text-white flex gap-3 items-center">
+                <span class="text-lg">All Status Changes</span>
+                <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full" id="allChangesCount">0</span>
+            </div>
+            <button onclick="closeModal('modalAllChanges')"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-0">
+            <table class="w-full text-left text-sm">
+                <thead class="text-[10px] uppercase text-slate-500 bg-slate-100 dark:bg-slate-800 sticky top-0 z-10 border-b dark:border-slate-700">
+                    <tr><th class="px-6 py-4">LGU</th><th class="px-6 py-4">Old Status</th><th class="px-6 py-4">New Status</th><th class="px-6 py-4 text-right">Action</th></tr>
+                </thead>
+                <tbody id="allChangesBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+            </table>
+        </div>
+     </div>
+  </div>
+
+  <div id="modalSingleDiff" class="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm modal p-4">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-7xl overflow-hidden">
+        <div class="p-4 border-b dark:border-slate-800 flex justify-between items-center font-black text-slate-800 dark:text-white"><span id="singleDiffTitle">Details</span><button onclick="closeModal('modalSingleDiff')"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="max-h-[80vh] overflow-y-auto">
+          <table class="w-full text-sm text-left table-fixed">
+            <thead class="bg-slate-50 dark:bg-slate-950 text-[10px] uppercase font-black text-slate-500">
+              <tr>
+                <th class="px-4 py-2 w-[15%]">Field</th>
+                <th class="px-4 py-2 w-[42.5%]">Old Value</th>
+                <th class="px-4 py-2 w-[42.5%]">New Value</th>
+              </tr>
+            </thead>
+            <tbody id="singleDiffBody"></tbody>
+          </table>
+        </div>
+     </div>
+  </div>
+
+  <div id="modalDetails" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm modal p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="bg-dict-blue p-6 flex justify-between items-start">
+        <div><h3 id="viewTitle" class="text-2xl font-black text-white tracking-tight">...</h3><p id="viewProvince" class="text-sm text-blue-200 font-black uppercase tracking-widest"></p></div>
+        <button onclick="closeModal('modalDetails')" class="text-white/50 hover:text-white text-2xl transition"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="sectionedContent" class="p-6 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <div id="modalEdit" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm modal p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="p-5 border-b bg-slate-50 dark:bg-slate-900 flex justify-between items-center font-black tracking-tight">Edit LGU Information<button onclick="closeModal('modalEdit')"><i class="fa-solid fa-xmark"></i></button></div>
+      <div id="editFormContainer" class="p-6 overflow-y-auto space-y-4">
+        <div id="dynamicInputs" class="grid grid-cols-1 gap-4"></div>
+      </div>
+      <div class="p-5 border-t flex justify-end gap-3 rounded-b-2xl">
+        <button onclick="closeModal('modalEdit')" class="px-5 py-2 text-xs font-black text-slate-500 uppercase tracking-widest hover:bg-slate-200 rounded transition">Cancel</button>
+        <button id="btnSaveLGU" onclick="saveLGU()" class="px-8 py-2 bg-dict-blue text-white rounded-lg text-xs font-black uppercase shadow-lg tracking-widest hover:bg-blue-700 transition">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalChart" class="fixed inset-0 z-[130] flex items-center justify-center bg-black/70 backdrop-blur-sm modal p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden">
+      <div class="p-5 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950 font-black"><div id="modalChartTitle">Chart</div><button onclick="closeModal('modalChart')"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+      <div class="p-6"><div class="h-[520px]"><canvas id="chartModalCanvas"></canvas></div></div>
+    </div>
+  </div>
+
+  <div id="settingsBar" class="bg-slate-800 dark:bg-slate-950 text-white p-4 hidden absolute top-0 left-0 w-full z-[200] shadow-xl border-b border-slate-700 animate-in slide-in-from-top duration-300">
+    <div class="flex flex-col md:flex-row justify-center items-center gap-4 max-w-4xl mx-auto relative">
+      <button onclick="toggleSettings()" class="absolute -top-1 right-0 text-slate-400 p-2 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+      
+      <div class="flex flex-col w-full md:w-auto">
+        <label class="text-[9px] font-bold uppercase text-slate-400 mb-1">Apps Script URL (Backend)</label>
+        <input type="text" id="apiUrl" placeholder="https://script.google.com/..." class="text-xs bg-slate-700 border border-slate-600 rounded px-4 py-2 w-full md:w-80 outline-none focus:ring-2 ring-blue-500">
+      </div>
+
+      <div class="flex flex-col w-full md:w-auto">
+        <label class="text-[9px] font-bold uppercase text-slate-400 mb-1">Gemini API Key</label>
+        <input type="password" id="aiKeyInput" placeholder="AIza..." class="text-xs bg-slate-700 border border-slate-600 rounded px-4 py-2 w-full md:w-48 outline-none focus:ring-2 ring-blue-500">
+      </div>
+
+      <button onclick="saveSettings()" class="bg-dict-blue hover:bg-blue-600 text-white text-xs font-black px-6 py-2 rounded shadow transition mt-auto h-9">CONNECT</button>
+    </div>
+  </div>
+
+ <script>
+    /* --- CONFIGURATION --- */
+    const DOWNLOAD_URL = ""; 
+    const CURRENT_VERSION = "1.10"; 
+    // FIXED_AI_KEY removed. Key now comes from LocalStorage.
+
+    let LIVE_DB = [], CURRENT_VIEW_DB = [], API_URL = localStorage.getItem('elgu_api_url') || '';
+    let activeFilter = 'All', map = null, markers = [];
+    let chartInstPie = null, chartInstBar = null, chartInstYear = null, chartModalInst = null;
+    let compareState = null, snapshotMode = false;
+    let curPage = 1, pgSize = 10, sortCol = 'Province', sortAsc = true;
+
+    // --- DROPDOWN OPTIONS ---
+    const DROPDOWN_OPTIONS = {
+       "STATUS": ['Operational', 'Developmental', 'With LOI', 'No LOI'],
+       "ELGU VERSION": ['V1', 'V2', 'Both', 'own system'],
+       "MOU STATUS": ['Completed', 'Transmitted to RO', 'Transmitted to CO', 'Pending', 'No Status'],
+       "EREADINESS STATUS": ['Digitally ready', 'Not digitally ready'],
+       "E-READINESS RESULT": ['Digitally ready', 'Not digitally ready'],
+       "UAT STATUS": ['COMPLETED', 'PENDING-RO', 'PENDING-LGU', 'PENDING-LBP', 'FOR SUBMISSION OF SIGN-UP DETAILS'],
+       "EGOVPAY STATUS": ['LIVE', 'FOR SETTLEMENT TESTING', 'FOR UAT', 'FOR SUBMISSION OF INTEGRATION FORM', 'FOR CREATION OF EGOVPAY ACCOUNTS', 'FOR CREATION OF ERECEIPT', 'NO CBD SUBMISSION'],
+       "BOOLEAN": ["TRUE", "FALSE"]
+    };
+
+    // --- EDIT FORM CONFIG ---
+    const EDIT_FORM_CONFIG = {
+        "LGU PROFILE": [
+            { label: "ID", keys: ["id", "_uid"], type: "hidden" },
+            { label: "Name", keys: ["LGU Full Name", "Name", "Municipality"], type: "locked" },
+            { label: "Province", keys: ["Province"], type: "locked" },
+            { label: "Region", keys: ["Region"], type: "locked" },
+            { label: "Level", keys: ["Level"], type: "text" },
+            { label: "Income Class", keys: ["Income Class"], type: "text" },
+            { label: "Overall Status", keys: ["Overall Status", "Status"], type: "select", options: "STATUS" },
+            { label: "Latitude", keys: ["Latitude", "Lat"], type: "text" },
+            { label: "Longitude", keys: ["Longitude", "Longtitude", "Lng"], type: "text" },
+            { label: "eLGU Version", keys: ["eLGU Version", "Version"], type: "select", options: "ELGU VERSION" }
+        ],
+        "eLGU ONBOARDING DOCUMENTS": [
+            { label: "Letter of Intent", keys: ["LOI", "Letter of Intent"], type: "select", options: "BOOLEAN" },
+            { label: "LOI Link", keys: ["LOI Link", "Letter of Intent Link"], type: "text" },
+            { label: "LOI Date", keys: ["LOI Date", "Date"], type: "text" },
+            { label: "eReadiness Survey", keys: ["eReadiness Survey", "e-Readiness"], type: "select", options: "BOOLEAN" },
+            { label: "eReadiness Status", keys: ["eReadiness Status", "e-Readiness Result"], type: "select", options: "EREADINESS STATUS" },
+            { label: "SB Resolution", keys: ["SB", "SB Resolution"], type: "select", options: "BOOLEAN" },
+            { label: "SB Link", keys: ["SB Link", "SB Resolution Link"], type: "text" },
+            { label: "SB Date", keys: ["SB Date", "SB Resolution Date"], type: "text" },
+            { label: "MOU", keys: ["MOU", "Memorandum of Understanding"], type: "select", options: "BOOLEAN" },
+            { label: "MOU Link", keys: ["MOU Link"], type: "text" },
+            { label: "MOU Status", keys: ["MOU Status"], type: "select", options: "MOU STATUS" }
+        ],
+        "EGOVPAY ONBOARDING": [
+            { label: "Client Bank Details Form", keys: ["eGovPay CBD Form", "CBD Form"], type: "select", options: "BOOLEAN" },
+            { label: "CBD Link", keys: ["eGovPay CBD Link", "CBD Link"], type: "text" },
+            { label: "Sign Up Details", keys: ["Sign Up Details"], type: "select", options: "BOOLEAN" },
+            { label: "Sign Up Details Link", keys: ["Sign up Details Link Form", "Sign Up Link"], type: "text" },
+            { label: "UAT Date", keys: ["eGovPay UAT Date", "UAT Date"], type: "text" },
+            { label: "Sign Off", keys: ["eGovPay Sign Off", "Sign Off"], type: "select", options: "BOOLEAN" },
+            { label: "Sign Off Link", keys: ["eGovPay Sign Off Link", "Sign Off Link"], type: "text" },
+            { label: "Sign Off Date", keys: ["eGovPay Sign Off Date", "Sign Off Date"], type: "text" },
+            { label: "eGovPay Status", keys: ["eGovPay Status", "egovpay_status"], type: "select", options: "EGOVPAY STATUS" },
+            { label: "eGovPay Remarks", keys: ["eGovPay Remarks", "Remarks"], type: "text" }
+        ],
+        "ADMIN TRAINING AND SYSTEM SETUP": [
+            { label: "Consent Form", keys: ["Consent Form", "Data Sharing Agreement"], type: "select", options: "BOOLEAN" },
+            { label: "Consent Form Link", keys: ["Consent Form Link"], type: "text" },
+            { label: "Training Start Date", keys: ["Training Start Date", "Admin Training Date"], type: "text" },
+            { label: "Training End Date", keys: ["Training End Date"], type: "text" },
+            { label: "Setup Checklist", keys: ["Setup Checklist", "System Setup"], type: "select", options: "BOOLEAN" },
+            { label: "Setup Checklist Link", keys: ["Setup Checklist Link"], type: "text" },
+            { label: "Setup Checklist Date", keys: ["Setup Checklist Date", "Setup Date"], type: "text" }
+        ],
+        "USER ACCEPTANCE AND TESTING": [
+            { label: "Issue Logs", keys: ["Issue Logs", "Issues"], type: "select", options: "BOOLEAN" },
+            { label: "Issue Logs Link", keys: ["Issue Logs Link"], type: "text" },
+            { label: "Acceptance Checklist", keys: ["Acceptance Checklist"], type: "select", options: "BOOLEAN" },
+            { label: "Acceptance Checklist Link", keys: ["Acceptance Checklist Link"], type: "text" },
+            { label: "UAT Sign Off", keys: ["UAT Sign Off"], type: "select", options: "BOOLEAN" },
+            { label: "UAT Sign Off Link", keys: ["UAT Sign Off Link"], type: "text" },
+            { label: "UAT Sign Off Date", keys: ["UAT Sign Off Date"], type: "text" },
+            { label: "UAT Status", keys: ["UAT Status"], type: "select", options: "UAT STATUS" },
+            { label: "UAT Remarks", keys: ["UAT Remarks"], type: "text" }
+        ],
+        "GO LIVE PREPARATIONS": [
+            { label: "Go Live Checklist", keys: ["Go Live Checklist", "Go-Live Checklist"], type: "select", options: "BOOLEAN" },
+            { label: "Go Live Checklist Link", keys: ["Go Live Checklist Link"], type: "text" },
+            { label: "Operational Date", keys: ["Operational Date", "Go Live Date", "Op Date"], type: "text" }
+        ],
+        "OVERALL": [
+            { label: "Overall Remarks", keys: ["Overall Remarks", "Remarks"], type: "text" },
+        ]
+    };
+
+    window.onload = () => {
+      if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+      document.getElementById('downloadLink').href = DOWNLOAD_URL; 
+      
+      // Load saved API Key into the Settings input
+      const savedKey = localStorage.getItem('elgu_ai_key') || '';
+      document.getElementById('aiKeyInput').value = savedKey;
+
+      if (API_URL) {
+        document.getElementById('apiUrl').value = API_URL;
+        initData();
+        checkVersion();
+        setInterval(() => { if (!snapshotMode && (!compareState || document.getElementById('compareBanner').classList.contains('hidden'))) fetchLiveData(); }, 30000);
+      } else toggleSettings();
+    };
+
+    function showLoading(txt = 'SYNCING DATA...') { document.getElementById('loaderText').innerText = txt; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+    function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function toggleDrawer() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('drawerOverlay').classList.toggle('open'); }
+
+    async function checkVersion() {
+      try {
+        const res = await fetch(`${API_URL}?action=checkVersion`);
+        const json = await res.json();
+        if (json.version && json.version !== CURRENT_VERSION) {
+            document.getElementById('remoteVersionDisplay').innerText = `New: V${json.version}`;
+            document.getElementById('forceUpdateModal').classList.remove('hidden');
+            document.body.classList.add('overflow-hidden'); 
+        }
+      } catch(e) {} 
+    }
+
+    async function initData() { 
+      showLoading(); 
+      const fetchPromise = fetchLiveData();
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 10000));
+      const result = await Promise.race([fetchPromise, timeoutPromise]);
+      if (result === 'timeout') {
+          hideLoading();
+          alert("Connection timed out. Please check your API URL.");
+          toggleSettings(); 
+      } else {
+          await fetchHistoryList();
+          hideLoading();
+      }
+    }
+
+    async function fetchLiveData() {
+      try {
+        const res = await fetch(`${API_URL}?action=getLive`);
+        LIVE_DB = normalizeData(await res.json());
+        if (document.getElementById('compareBanner').classList.contains('hidden') && !snapshotMode) {
+            if (activeFilter !== 'All') CURRENT_VIEW_DB = LIVE_DB.filter(x => x.Province === activeFilter);
+            else CURRENT_VIEW_DB = LIVE_DB;
+            renderDashboard();
+            if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) {
+                if (!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB);
+            }
+            document.getElementById('statusIndicator').classList.remove('hidden');
+            document.getElementById('statusText').innerText = 'Live';
+        }
+        return 'success';
+      } catch (e) { console.error(e); return 'error'; }
+    }
+
+    function normalizeData(rawData) {
+      return rawData.map(row => {
+        const keys = Object.keys(row);
+        const cleanKey = (str) => String(str).toLowerCase().replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+        const find = (ks) => { const k = keys.find(x => ks.some(key => cleanKey(x) === cleanKey(key))); return k ? row[k] : ""; };
+        return {
+          ID: row['_uid'] || find(['id', 'new geocode']),
+          Province: find(['province']),
+          Municipality: find(['name', 'municipality', 'lgu full name']),
+          Status: find(['overall status', 'status']),
+          Remarks: find(['overall remarks', 'remarks']),
+          OpDate: find(['operational date', 'go live date', 'op date', 'bg', 'operational_date']), 
+          Lat: row[keys[8]] || find(['latitude', 'lat']),
+          Lng: row[keys[9]] || find(['longitude', 'lng']),
+          _raw: row
+        };
+      }).filter(x => x.Municipality);
+    }
+
+    function renderDashboard() { renderSidebar(); updateStats(); renderCharts(); populateYearFilter(); resetPg(); applyFilters(); }
+
+    function renderSidebar() {
+      const nav = document.getElementById('sidebar-nav');
+      const provs = [...new Set(LIVE_DB.map(x => x.Province).filter(Boolean))].sort();
+      const allBtn = `<button onclick="filterProv('All')" class="sb-btn ${activeFilter === 'All' ? 'active' : ''}"><span class="flex items-center gap-2"><i class="fa-solid fa-globe opacity-70"></i> <span>All Provinces</span></span><span class="sb-pill">${(activeFilter === 'All' ? (CURRENT_VIEW_DB?.length || LIVE_DB.length) : LIVE_DB.length)}</span></button>`;
+      nav.innerHTML = allBtn + provs.map(p => `<button onclick="filterProv('${escapeQuotes(p)}')" class="sb-btn ${activeFilter === p ? 'active' : ''}"><span class="truncate">${p}</span><span class="sb-pill">${LIVE_DB.filter(d => d.Province === p).length}</span></button>`).join('');
+    }
+
+    function escapeQuotes(s) { return String(s).replace(/'/g, "\\'"); }
+
+    async function filterProv(p) {
+      activeFilter = p; renderSidebar(); toggleDrawer();
+      CURRENT_VIEW_DB = (p === 'All') ? LIVE_DB : LIVE_DB.filter(d => d.Province === p);
+      if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) {
+        renderMapMarkers(CURRENT_VIEW_DB);
+        if (p !== 'All' && map && markers.length > 0) {
+            const group = new L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.1));
+        } else if (map) {
+            map.setView([17.2, 121.0], 8);
+        }
+      }
+      resetPg(); applyFilters(); updateStats(); renderCharts();
+    }
+
+    function getStatsFrom(data) {
+      let s = { op: 0, dev: 0, loi: 0, no: 0, total: data.length };
+      data.forEach(r => {
+        const st = (r.Status || "").toLowerCase();
+        if (st.includes('operational')) s.op++;
+        else if (st.includes('developmental')) s.dev++;
+        else if (st.includes('no loi')) s.no++;
+        else if (st.includes('with loi') || st.includes('loi')) s.loi++;
+        else s.no++;
+      });
+      return s;
+    }
+    function updateStats() { const s = getStatsFrom(CURRENT_VIEW_DB); ['total', 'op', 'dev', 'loi', 'no'].forEach(k => document.getElementById(`kpi-${k}`).innerText = s[k]); return s; }
+
+    function renderCharts() {
+      const s = updateStats();
+      const txt = document.documentElement.classList.contains('dark') ? '#94a3b8' : '#475569';
+      const totalLGUs = CURRENT_VIEW_DB.length; // Capture total count for tooltip reference
+      window.__chartConfigs = window.__chartConfigs || {};
+      
+      const standardTooltip = { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) label += ': '; let val = context.raw; let total = context.chart._metasets[context.datasetIndex].total; if(context.chart.config.type === 'bar') { total = 0; context.chart.data.datasets.forEach(ds => total += ds.data[context.dataIndex]); } let pct = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%'; return `${label}${val} out of ${total} (${pct})`; } } };
+
+      // TIMELINE TOOLTIP: Compare segment to Total LGUs
+      const timelineTooltip = { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) label += ': '; let val = context.raw; let pct = totalLGUs > 0 ? ((val / totalLGUs) * 100).toFixed(1) + '%' : '0%'; return `${label}${val} out of ${totalLGUs} Total LGUs (${pct})`; } } };
+
+      if (chartInstPie) chartInstPie.destroy();
+      const cfgPie = { type: 'doughnut', data: { labels: ['Operational', 'Developmental', 'With LOI', 'No LOI'], datasets: [{ data: [s.op, s.dev, s.loi, s.no], backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right', labels: { color: txt, font: {size: 10} } }, tooltip: standardTooltip } } };
+      chartInstPie = new Chart(document.getElementById('chartPie'), cfgPie);
+      window.__chartConfigs.pie = { title: 'Status Overview', config: cfgPie, useStandardTooltip: true };
+
+      // REVISED TIMELINE LOGIC: STACKED + LINE OVERLAY
+      const dateRows = CURRENT_VIEW_DB.filter(d => /\d{4}/.test(String(d.OpDate||"")));
+      const yearlyData = {};
+      dateRows.forEach(d => {
+          const y = (String(d.OpDate||"").match(/\d{4}/)||[])[0];
+          if(y) {
+              if(!yearlyData[y]) yearlyData[y] = { op: 0, dev: 0, loi: 0, no: 0 };
+              const st = (d.Status || '').toLowerCase();
+              if(st.includes('operational')) yearlyData[y].op++;
+              else if(st.includes('developmental')) yearlyData[y].dev++;
+              else if(st.includes('with loi') || st.includes('loi')) yearlyData[y].loi++;
+              else yearlyData[y].no++; // No LOI or Others
+          }
+      });
+      const yLabels = Object.keys(yearlyData).sort();
+      let accOp = 0, accDev = 0, accLoi = 0, accNo = 0;
+      const dOp = [], dDev = [], dLoi = [], dNo = [], dOverall = [];
+      
+      yLabels.forEach(y => { 
+          accOp += yearlyData[y].op; 
+          accDev += yearlyData[y].dev;
+          accLoi += yearlyData[y].loi;
+          accNo += yearlyData[y].no;
+          
+          dOp.push(accOp); 
+          dDev.push(accDev);
+          dLoi.push(accLoi);
+          dNo.push(accNo);
+          dOverall.push(accOp + accDev); // Combined Op + Dev
+      });
+
+      if (chartInstYear) chartInstYear.destroy();
+      const cfgYear = { 
+          type: 'bar', 
+          data: { 
+              labels: yLabels, 
+              datasets: [ 
+                  { label: 'Overall (Op + Dev)', data: dOverall, type: 'line', borderColor: '#4f46e5', backgroundColor: '#4f46e5', borderWidth: 2, fill: false, order: 0 },
+                  { label: 'Operational', data: dOp, backgroundColor: '#22c55e', stack: 'Stack 0', order: 1 }, 
+                  { label: 'Developmental', data: dDev, backgroundColor: '#3b82f6', stack: 'Stack 0', order: 1 },
+              ] 
+          }, 
+          options: { 
+              responsive: true, 
+              maintainAspectRatio: false, 
+              interaction: { mode: 'index', intersect: false }, 
+              plugins: { legend: { display: true, position: 'bottom', labels: { color: txt, font: {size: 10} } }, tooltip: timelineTooltip }, 
+              scales: { x: { stacked: true, ticks: { color: txt } }, y: { stacked: true, ticks: { color: txt } } } 
+          } 
+      };
+      chartInstYear = new Chart(document.getElementById('chartYear'), cfgYear);
+      window.__chartConfigs.year = { title: 'Timeline', config: cfgYear, useTotalLGUTooltip: true };
+
+      // PROVINCIAL LOGIC: STACKED
+      const provs = [...new Set(CURRENT_VIEW_DB.map(x => x.Province).filter(Boolean))].sort().slice(0, 30);
+      const ds = { op: [], dev: [], loi: [], no: [] };
+      provs.forEach(p => { const sub = CURRENT_VIEW_DB.filter(d => d.Province === p); let ls = getStatsFrom(sub); ds.op.push(ls.op); ds.dev.push(ls.dev); ds.loi.push(ls.loi); ds.no.push(ls.no); });
+
+      if (chartInstBar) chartInstBar.destroy();
+      const cfgBar = { 
+          type: 'bar', 
+          data: { 
+              labels: provs, 
+              datasets: [
+                  { label: 'Operational', data: ds.op, backgroundColor: '#22c55e', stack: 'Stack 0' }, 
+                  { label: 'Developmental', data: ds.dev, backgroundColor: '#3b82f6', stack: 'Stack 0' }, 
+                  { label: 'With LOI', data: ds.loi, backgroundColor: '#f59e0b', stack: 'Stack 0' }, 
+                  { label: 'No LOI', data: ds.no, backgroundColor: '#ef4444', stack: 'Stack 0' }
+              ] 
+          }, 
+          options: { 
+              responsive: true, 
+              maintainAspectRatio: false, 
+              interaction: { mode: 'index', intersect: false },
+              scales: { x: { stacked: true, ticks: { color: txt, font: { size: 9 }, autoSkip: false, maxRotation: 90 } }, y: { stacked: true, ticks: { color: txt } } }, 
+              plugins: { legend: { display: false }, tooltip: standardTooltip } 
+          } 
+      };
+      chartInstBar = new Chart(document.getElementById('chartBar'), cfgBar);
+      window.__chartConfigs.bar = { title: 'Provincial Breakdown', config: cfgBar, useStandardTooltip: true };
+    }
+
+    function maximizeChart(which) {
+      const meta = (window.__chartConfigs || {})[which];
+      if (!meta) return;
+      document.getElementById('modalChartTitle').innerText = meta.title;
+      openModal('modalChart');
+      setTimeout(() => {
+        if (chartModalInst) chartModalInst.destroy();
+        const deep = JSON.parse(JSON.stringify(meta.config));
+        
+        if (meta.useTotalLGUTooltip) {
+            deep.options.plugins.tooltip = { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) label += ': '; let val = context.raw; let total = CURRENT_VIEW_DB.length; let pct = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%'; return `${label}${val} out of ${total} Total LGUs (${pct})`; } } };
+        } else {
+              deep.options.plugins.tooltip = { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) label += ': '; let val = context.raw; let total = 0; if(meta.config.type === 'bar') { context.chart.data.datasets.forEach(ds => total += ds.data[context.dataIndex]); } else { total = context.chart._metasets[context.datasetIndex].total; } let pct = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%'; return `${label}${val} out of ${total} (${pct})`; } } };
+        }
+
+        chartModalInst = new Chart(document.getElementById('chartModalCanvas'), deep);
+      }, 50);
+    }
+
+    function resetPg() { curPage = 1; }
+    function applyFilters() {
+      const txt = document.getElementById('searchBox').value.toLowerCase(); const status = document.getElementById('filterStatus').value; const year = document.getElementById('filterYear').value;
+      let data = CURRENT_VIEW_DB;
+      if (txt) data = data.filter(d => JSON.stringify(d).toLowerCase().includes(txt));
+      if (status !== 'All') data = data.filter(d => (d.Status || "").includes(status));
+      if (year !== 'All') data = data.filter(d => (d.OpDate || "").includes(year));
+      data.sort((a, b) => { let va = String(a[sortCol] || ''), vb = String(b[sortCol] || ''); return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va); });
+      const total = data.length; const maxPage = Math.max(1, Math.ceil(total / pgSize)); if (curPage > maxPage) curPage = maxPage;
+      const start = (curPage - 1) * pgSize; const end = Math.min(start + pgSize, total);
+      document.getElementById('pgStart').innerText = total ? start + 1 : 0; document.getElementById('pgEnd').innerText = end; document.getElementById('pgTotal').innerText = total;
+      renderTable(data.slice(start, end));
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('tableBody'); tbody.innerHTML = '';
+      data.forEach((row) => {
+        const c = statusColor(row.Status); const gIdx = LIVE_DB.findIndex(x => x.ID === row.ID);
+        tbody.innerHTML += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition border-b border-slate-50 dark:border-slate-800/50"><td class="px-6 py-4 font-black text-slate-400 text-[10px] uppercase">${row.Province || '-'}</td><td class="px-6 py-4 font-bold text-slate-800 dark:text-slate-200 text-xs">${row.Municipality}</td><td class="px-6 py-4"><span class="badge" style="background:${c}20; color:${c}">${row.Status || '-'}</span></td><td class="px-6 py-4 text-xs font-mono text-slate-500">${row.OpDate || '-'}</td><td class="px-6 py-4 text-[10px] text-slate-400 truncate max-w-[150px]">${row.Remarks || '-'}</td><td class="px-6 py-4 text-right flex justify-end gap-2"><button onclick="openViewModal(${gIdx})" class="text-[10px] font-black text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:text-dict-blue uppercase tracking-tighter transition">View</button><button onclick="openEditModal(${gIdx})" class="text-[10px] font-black text-white bg-dict-blue px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-700 uppercase tracking-tighter transition">Edit</button></td></tr>`;
+      });
+    }
+
+    function initMap() {
+      // FIX: Check if container is visible before loading
+      if (document.getElementById('view-map').classList.contains('hidden')) return;
+      if (map) map.remove(); 
+      map = L.map('map').setView([17.2, 121.0], 8);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+      renderMapMarkers(CURRENT_VIEW_DB);
+    }
+
+    function statusColor(status) {
+      const s = (status || '').toLowerCase();
+      if (s.includes('operational')) return '#22c55e'; if (s.includes('developmental')) return '#3b82f6'; if (s.includes('no loi')) return '#ef4444'; if (s.includes('with loi') || s.includes('loi')) return '#f59e0b'; return '#ef4444';
+    }
+    
+    function renderMapMarkers(data) {
+      if (!map) return; markers.forEach(m => map.removeLayer(m)); markers = [];
+      data.forEach(d => {
+        const lat = parseFloat(d.Lat); const lng = parseFloat(d.Lng); if (!isFinite(lat) || !isFinite(lng)) return;
+        const c = statusColor(d.Status);
+        const popup = `<div style="min-width:180px"><div style="font-weight:900">${d.Municipality}</div><div style="font-size:12px; opacity:.85">${d.Province || '-'}</div><div style="margin-top:6px; font-size:12px"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:${c};margin-right:6px"></span><b>${d.Status || '-'}</b></div><div style="margin-top:4px; font-size:10px; color:#666; font-style:italic; border-top:1px solid #eee; padding-top:4px">${d.Remarks || 'No remarks'}</div></div>`;
+        markers.push(L.circleMarker([lat, lng], { radius: 6, fillColor: c, color: '#fff', weight: 1, fillOpacity: 0.9 }).bindPopup(popup).addTo(map));
+      });
+    }
+
+    /* --- UPDATED AI FUNCTION: Sends actual data rows --- */
+    async function sendChat() {
+      const i = document.getElementById('chatInput'); const txt = i.value.trim(); if (!txt) return;
+      const c = document.getElementById('chatContainer');
+      const userDiv = document.createElement('div'); userDiv.className = "user-msg chat-bubble self-end animate-slide-in"; userDiv.innerText = txt; c.appendChild(userDiv); i.value = '';
+      
+      // CHECK FOR API KEY
+      const apiKey = localStorage.getItem('elgu_ai_key');
+      if (!apiKey) {
+          const errDiv = document.createElement('div'); 
+          errDiv.className = "ai-msg chat-bubble text-red-500 border-red-200 bg-red-50"; 
+          errDiv.innerHTML = '<b>Configuration Missing:</b> Please click the gear icon <i class="fa-solid fa-gear"></i> and enter your Gemini API Key.'; 
+          c.appendChild(errDiv); c.scrollTop = c.scrollHeight;
+          return;
+      }
+
+      const loader = document.createElement('div'); loader.className = "ai-msg chat-bubble"; loader.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Analyzing...'; c.appendChild(loader); c.scrollTop = c.scrollHeight;
+      
+      // BUILD CONTEXT WITH ACTUAL DATA ROWS
+      // We limit to current filtered view to make it relevant
+      const stats = getStatsFrom(CURRENT_VIEW_DB);
+      
+      // Create a CSV-like list of the data (Limit to avoid token overflow if list is huge)
+      const limit = 400; // Increased limit for better context
+      const dataRows = CURRENT_VIEW_DB.slice(0, limit).map(d => `- ${d.Municipality} (${d.Province}): ${d.Status}. Remarks: ${d.Remarks}`).join('\n');
+      
+      const context = `
+      System Context: You are a data analyst for the eLGU system.
+      Current Filtered View Stats: Total ${CURRENT_VIEW_DB.length}, Op: ${stats.op}, Dev: ${stats.dev}, With LOI: ${stats.loi}, No LOI: ${stats.no}.
+      
+      Data List (showing first ${Math.min(CURRENT_VIEW_DB.length, limit)} items):
+      ${dataRows}
+      
+      User Question: "${txt}"
+      Answer concisely based on the list above.
+      `;
+
+      try {
+          const res = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'askAI',
+              key: apiKey,
+              prompt: context
+            })
+          });
+          
+          const json = await res.json();
+          loader.remove(); 
+          const aiDiv = document.createElement('div'); aiDiv.className = "ai-msg chat-bubble animate-slide-in"; aiDiv.innerHTML = marked.parse(json.answer || "No response."); c.appendChild(aiDiv);
+      } catch(err) { loader.remove(); const errDiv = document.createElement('div'); errDiv.className = "ai-msg chat-bubble text-red-500"; errDiv.innerText = "Error: " + err.message; c.appendChild(errDiv); }
+      c.scrollTop = c.scrollHeight;
+    }
+
+    function findValueInRow(raw, keysArray) {
+        if (!keysArray || !keysArray.length) return { key: null, value: "" };
+        const rawKeys = Object.keys(raw);
+        const cleanKey = (str) => String(str).toLowerCase().replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+        for (const potentialKey of keysArray) {
+            const foundKey = rawKeys.find(k => cleanKey(k) === cleanKey(potentialKey));
+            if (foundKey) return { key: foundKey, value: raw[foundKey] };
+        }
+        return { key: null, value: "" };
+    }
+
+    function openViewModal(idx) { 
+        const d = LIVE_DB[idx]; if (!d) return; 
+        
+        // Data Keys to display as text fields
+        const viewSections = { 
+            "LGU Profile": ["PROVINCE", "REGION", "LEVEL", "INCOME CLASS", "Latitude", "Longtitude", "eLGU Version", "Date"], 
+            "eLGU Onboarding Documents": ["Letter of Intent", "LOI Date", "E-READINESS SURVEY", "eReadiness Status", "SB Resolution", "SB Date", "Memorandum of Understanding", "MOU Status"], 
+            "eGovPay Onboarding": ["Sign Up Details", "eGovPay UAT Date", "eGovPay Sign Off", "eGovPay Sign Off Date", "eGovPay Status", "eGovPay Remarks"], 
+            "Admin Training and System Setup": ["Consent Form", "Training Start Date", "Training End Date", "Setup Checklist", "SET UP Date"], 
+            "User Acceptance and Testing": ["Issue Logs", "Acceptance Checklist", "UAT Sign Off", "UAT Date", "UAT Status", "UAT Remarks"], 
+            "Go Live Preparations": ["Go Live Checklist", "OPERATIONAL DATE"] 
+        };
+
+        // Attachment grouping configuration (New logic)
+        const attachmentMap = {
+          "LGU Profile": ["FOLDER LINK"],
+          "eLGU Onboarding Documents": ["LOI LINK", "SB LINK", "MOU LINK", "E-READINESS SURVERY LINK", "E-READINESS SURVEY LINK"],
+          "eGovPay Onboarding": ["EGOVPAY CBD LINK", "EGOVPAY SIGN OFF LINK"],
+          "Admin Training and System Setup": ["CONSENT FORM Link", "SETUP CHECKLIST Link"],
+          "User Acceptance and Testing": ["ISSUE LOGS Link", "ACCEPTANCE CHECKLIST Link", "UAT SIGN OFF Link"],
+          "Go Live Preparations": ["Go Live Checklist Link"]
+        };
+
+        const versionObj = findValueInRow(d._raw, ["eLGU Version", "Version"]); const version = versionObj.value || '';
+        document.getElementById('viewTitle').innerText = d.Municipality; 
+        document.getElementById('viewProvince').innerHTML = `<div class="mb-2 text-sm font-black uppercase tracking-widest text-blue-200">${d.Province || '-'}</div><div class="flex items-center gap-2"><div class="inline-block px-3 py-1 rounded-md text-[10px] font-bold bg-white/10 text-white border border-white/20 shadow-sm backdrop-blur-sm">${d.Status || 'Unknown Status'}</div>${version ? `<div class="inline-block px-3 py-1 rounded-md text-[10px] font-bold bg-blue-400/40 text-white border border-white/20 shadow-sm backdrop-blur-sm">${version}</div>` : ''}</div>`; 
+        
+        const cont = document.getElementById('sectionedContent'); cont.innerHTML = ""; 
+        
+        // --- 1. OVERALL REMARKS SECTION (MOVED TO TOP) ---
+        const remKey = Object.keys(d._raw).find(x => x.toLowerCase().includes('overall remarks')); 
+        const remVal = remKey ? d._raw[remKey] : '';
+        
+        if(remVal && remVal !== '-') {
+            cont.innerHTML += `
+            <div class="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-4 rounded-xl">
+                <div class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2"><i class="fa-regular fa-comment-dots mr-2"></i>Overall Remarks</div>
+                <div class="text-sm font-medium text-slate-700 dark:text-slate-200 leading-relaxed">${remVal}</div>
+            </div>`;
+        }
+        
+        // --- 2. OTHER SECTIONS LOOP ---
+        for (const [sec, fields] of Object.entries(viewSections)) { 
+            let html = `<div class="section-header">${sec}</div><div class="grid grid-cols-2 gap-x-6 gap-y-4 mb-2">`; 
+            
+            // Render Text Fields
+            fields.forEach(f => { 
+                let val = '-'; let configEntry = null;
+                for (const section of Object.values(EDIT_FORM_CONFIG)) { const entry = section.find(item => item.label === f || item.keys.includes(f)); if(entry) { configEntry = entry; break; } }
+                if(configEntry) { val = findValueInRow(d._raw, configEntry.keys).value || '-'; } else { const k = Object.keys(d._raw).find(rk => rk.toLowerCase().includes(f.toLowerCase()) || f.toLowerCase().includes(rk.toLowerCase())); val = k ? d._raw[k] : '-'; }
+                
+                // UNIFORM STYLE: All labels now use the same style, no specific blue border for "Main Headers"
+                const labelClass = "text-[10px] font-bold text-slate-400 block uppercase mb-1"; 
+                html += `<div><span class="${labelClass}">${f}</span><span class="text-xs font-semibold dark:text-white break-words">${val}</span></div>`; 
+            }); 
+            html += `</div>`;
+
+            // Render Attachments specific to this section
+            const targetLinks = attachmentMap[sec] || [];
+            const foundLinks = [];
+            targetLinks.forEach(linkKey => {
+                // Find matching key in raw data (fuzzy match)
+                const foundKey = Object.keys(d._raw).find(k => k.toLowerCase().includes(linkKey.toLowerCase()));
+                if(foundKey) {
+                    const url = d._raw[foundKey];
+                    // Always add to list, but mark validity
+                    const isValid = url && String(url).toLowerCase().startsWith('http');
+                    foundLinks.push({ label: linkKey, url: url, valid: isValid });
+                }
+            });
+
+            if (foundLinks.length > 0) {
+                html += `<div class="mb-5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                  <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Attachments</div>
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-2">`;
+                
+                foundLinks.forEach(link => {
+                    if (link.valid) {
+                        // Case A: Valid Link (Blue, clickable)
+                        html += `<a href="${link.url}" target="_blank" class="flex flex-col items-center justify-center p-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg hover:border-dict-blue transition group">
+                            <i class="fa-solid fa-paperclip text-slate-300 group-hover:text-dict-blue mb-1"></i>
+                            <span class="text-[9px] font-bold uppercase text-center text-slate-500 group-hover:text-dict-blue truncate w-full">${link.label}</span>
+                        </a>`;
+                    } else {
+                        // Case B: Missing/Invalid Link (Red, disabled look)
+                        html += `<div class="flex flex-col items-center justify-center p-2 bg-red-50/50 dark:bg-red-900/10 border border-red-300 dark:border-red-800/50 rounded-lg cursor-not-allowed opacity-75">
+                            <i class="fa-solid fa-file-circle-xmark text-red-400 mb-1"></i>
+                            <span class="text-[9px] font-bold uppercase text-center text-red-400 truncate w-full">${link.label}</span>
+                            <span class="text-[8px] font-bold text-red-300 uppercase tracking-wider mt-0.5">No File</span>
+                        </div>`;
+                    }
+                });
+                html += `</div></div>`;
+            } else {
+                html += `<div class="mb-5"></div>`; // Spacer if no attachments defined for section
+            }
+
+            cont.innerHTML += html; 
+        } 
+        
+        openModal('modalDetails'); 
+    }
+
+    // --- REWRITTEN openEditModal FUNCTION ---
+    function openEditModal(idx) {
+      const d = LIVE_DB[idx]; if (!d) return;
+      const cont = document.getElementById('dynamicInputs'); cont.innerHTML = `<input type="hidden" id="editIdLock" value="${d.ID}">`;
+      for (const [sectionName, fields] of Object.entries(EDIT_FORM_CONFIG)) {
+          let sectionHtml = `<div class="font-black text-xs text-slate-800 dark:text-white mt-6 mb-3 pb-1 border-b-2 border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-800 z-10 pt-2">${sectionName}</div><div class="grid grid-cols-1 gap-3">`;
+          fields.forEach(fieldConfig => {
+              if (fieldConfig.type === "hidden") return;
+              const { key: actualKey, value: actualValue } = findValueInRow(d._raw, fieldConfig.keys);
+              const targetKey = actualKey || fieldConfig.keys[0];
+              const safeVal = String(actualValue || "").trim();
+              let inputHtml = "";
+
+              // CHECK FOR DATE
+              const isDate = fieldConfig.label.includes("Date") || fieldConfig.type === "date";
+
+              if (fieldConfig.type === "locked") {
+                 inputHtml = `<input type="text" data-key="${targetKey}" value="${safeVal}" readonly class="w-full text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed opacity-75">`;
+              }
+              else if (fieldConfig.type === "select") {
+                 const optionsKey = fieldConfig.options; const optionsList = DROPDOWN_OPTIONS[optionsKey] || [];
+                 const optionsHtml = optionsList.map(opt => `<option value="${opt}" ${safeVal.toUpperCase() === opt.toUpperCase() ? 'selected' : ''}>${opt}</option>`).join('');
+                 inputHtml = `<select data-key="${targetKey}" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500">${optionsHtml}</select>`;
+              }
+              else if (isDate) {
+                 // Try to format existing value to YYYY-MM-DD for the date input to show it
+                 // If conversion fails, it will pass the raw string. The browser will ignore invalid date strings (show mm/dd/yyyy blank), but that is expected behavior for HTML5 date inputs.
+                 let dateVal = safeVal;
+                 const dateObj = new Date(safeVal);
+                 
+                 // Basic validation to ensure it's not "N/A" or "-" or empty before trying to convert
+                 if (safeVal && safeVal.length > 5 && !isNaN(dateObj.getTime())) {
+                    try { 
+                        // Offset the timezone so dates don't shift backwards by one day
+                        const offset = dateObj.getTimezoneOffset() * 60000;
+                        const localISODate = new Date(dateObj.getTime() - offset).toISOString().split('T')[0];
+                        dateVal = localISODate;
+                    } catch(e){}
+                 }
+
+                 inputHtml = `<input type="date" data-key="${targetKey}" value="${dateVal}" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500 text-slate-600">`;
+              }
+              else {
+                 inputHtml = `<input type="text" data-key="${targetKey}" value="${safeVal}" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500">`;
+              }
+              sectionHtml += `<div><label class="block text-[10px] font-black text-slate-500 uppercase mb-1">${fieldConfig.label}</label>${inputHtml}</div>`;
+          });
+          sectionHtml += `</div>`;
+          cont.innerHTML += sectionHtml;
+      }
+      openModal('modalEdit');
+    }
+    
+    // --- UPDATED saveSettings: Saves API Key now ---
+    function saveSettings() {
+       localStorage.setItem('elgu_api_url', document.getElementById('apiUrl').value.trim());
+       localStorage.setItem('elgu_ai_key', document.getElementById('aiKeyInput').value.trim()); // Save AI Key
+       location.reload(); 
+    }
+
+    async function saveLGU() { 
+       const btn = document.getElementById('btnSaveLGU'); btn.innerText = 'SAVING...'; const updates = {}; 
+       const inputs = document.querySelectorAll('#dynamicInputs [data-key]'); inputs.forEach(i => { updates[i.getAttribute('data-key')] = i.value; });
+       const idInput = document.querySelector('#dynamicInputs input[type="hidden"]'); const id = idInput ? idInput.value : null;
+       if(!id) { alert('Error: Record ID missing. Please reload.'); btn.innerText = 'Save Changes'; return; }
+       const idx = LIVE_DB.findIndex(x => x.ID === id); if (idx !== -1) { Object.keys(updates).forEach(k => { LIVE_DB[idx]._raw[k] = updates[k]; }); const newNorm = normalizeData([LIVE_DB[idx]._raw])[0]; LIVE_DB[idx] = newNorm; }
+       try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateLGU', id: id, updates: updates }) }); alert('Saved Successfully!'); } catch (e) { alert('Saved (Offline Simulation)'); } 
+       closeModal('modalEdit'); applyFilters(); updateStats(); renderCharts(); btn.innerText = 'Save Changes'; 
+    }
+
+    function fetchHistoryList() {
+       return fetch(`${API_URL}?action=getHistoryDates`)
+         .then(r => r.json())
+         .then(l => {
+            const opts = l.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+            ['compareA', 'compareB'].forEach(id => { document.getElementById(id).innerHTML = `<option value="live">Live Data</option>` + opts; });
+            document.getElementById('historyList').innerHTML = l.map(i => `<tr><td class="p-3 font-black">${i.name}</td><td class="p-3 text-slate-400 font-mono text-[10px]">${i.timestamp || ''}</td><td class="p-3 text-right"><button onclick="loadSnapshot('${escapeQuotes(i.name)}')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border text-[10px] font-black hover:bg-slate-50 dark:hover:bg-slate-700 transition">Load</button></td></tr>`).join('');
+         })
+         .catch(e => console.error("History fetch error:", e));
+    }
+
+    async function loadSnapshot(name) { try { showLoading(`Loading ${name}...`); closeModal('modalHistory'); const raw = await (await fetch(`${API_URL}?action=getHistoryData&date=${encodeURIComponent(name)}`)).json(); snapshotMode = true; compareState = null; document.getElementById('compareBanner').classList.add('hidden'); CURRENT_VIEW_DB = normalizeData(raw); renderDashboard(); if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { if (!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); } document.getElementById('statusIndicator').classList.remove('hidden'); document.getElementById('statusText').innerText = 'Snapshot'; document.getElementById('snapshotBanner').classList.remove('hidden'); document.getElementById('snapshotName').innerText = name; hideLoading(); } catch (e) { hideLoading(); alert('Failed to load snapshot.'); } }
+    function exitSnapshotMode() { snapshotMode = false; document.getElementById('snapshotBanner').classList.add('hidden'); CURRENT_VIEW_DB = LIVE_DB; renderDashboard(); if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { if (!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); } document.getElementById('statusText').innerText = 'Live'; }
+    async function saveSnapshot() { const n = prompt("Report Name:"); if (!n) return; showLoading('Saving Snapshot...'); await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSnapshot', reportName: n, data: LIVE_DB.map(d => d._raw) }) }); hideLoading(); fetchHistoryList(); }
+    function exportChangedCSV() { if (!compareState || !compareState.changedRows.length) return alert('No changes.'); const rows = compareState.changedRows; const csv = ['Municipality,Province,Old Status,New Status', ...rows.map(r => [r.Municipality, r.Province, r.oldStatus, r.newStatus].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','))].join('\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `diff_${compareState.A}_vs_${compareState.B}.csv`; a.click(); }
+    
+    async function runComparison() {
+      const A = document.getElementById('compareA').value; const B = document.getElementById('compareB').value;
+      closeModal('modalHistory'); showLoading('Comparing...');
+      const getD = async (v) => v === 'live' ? LIVE_DB : normalizeData(await (await fetch(`${API_URL}?action=getHistoryData&date=${encodeURIComponent(v)}`)).json());
+      const dA = await getD(A); const dB = await getD(B);
+      const mapA = new Map(dA.map(x => [x.Municipality, x]));
+      const changed = [];
+      dB.forEach(nb => {
+        const oa = mapA.get(nb.Municipality); if (!oa) return;
+        const s1 = (oa.Status||'').trim();
+        const s2 = (nb.Status||'').trim();
+        if (s1 !== s2) {
+             const allKeys = [...new Set([...Object.keys(oa._raw), ...Object.keys(nb._raw)])];
+             const diffs = [];
+             allKeys.forEach(k => {
+                 if(k.startsWith('_')) return;
+                 const v1 = String(oa._raw[k] || '').trim();
+                 const v2 = String(nb._raw[k] || '').trim();
+                 if(v1 !== v2) diffs.push({ key: k, old: v1, new: v2 });
+             });
+             changed.push({ Municipality: nb.Municipality, Province: nb.Province, oldStatus: s1, newStatus: s2, diffs: diffs });
+        }
+      });
+      compareState = { A, B, statsA: getStatsFrom(dA), statsB: getStatsFrom(dB), changedRows: changed };
+      document.getElementById('compareBanner').classList.remove('hidden'); document.getElementById('compareLabels').innerText = `${A} vs ${B}`;
+      renderCompareModal(); openModal('modalCompare'); CURRENT_VIEW_DB = dB; renderDashboard(); 
+      if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { if (!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); }
+      hideLoading();
+    }
+
+    function renderCompareModal() {
+      if (!compareState) return;
+      document.getElementById('cmpLabelA').innerText = compareState.A; document.getElementById('cmpLabelB').innerText = compareState.B;
+      document.getElementById('cmpChangedBig').innerText = compareState.changedRows.length;
+      document.getElementById('cmpSubtitle').innerText = `${compareState.A} vs ${compareState.B}`;
+      const keys = [{k:'op', l:'Operational', c:'green'}, {k:'dev', l:'Developmental', c:'blue'}, {k:'loi', l:'With LOI', c:'yellow'}, {k:'no', l:'No LOI', c:'red'}];
+      const htmlStats = keys.map(i => {
+         const v1 = compareState.statsA[i.k]; const v2 = compareState.statsB[i.k];
+         const diff = v2 - v1;
+         const icon = diff > 0 ? '<i class="fa-solid fa-arrow-up"></i>' : (diff < 0 ? '<i class="fa-solid fa-arrow-down"></i>' : '<i class="fa-solid fa-minus"></i>');
+         const color = diff > 0 ? 'text-green-500' : (diff < 0 ? 'text-red-500' : 'text-slate-400');
+         return `<div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+            <span class="text-[9px] uppercase font-black text-slate-400 tracking-widest mb-1">${i.l}</span>
+            <div class="flex items-end justify-between">
+                <div class="text-sm font-bold text-slate-500 dark:text-slate-400">Old: <b class="text-slate-800 dark:text-white">${v1}</b></div>
+                <div class="text-${i.c}-600 font-black text-lg">${v2}</div>
+            </div>
+            <div class="text-[10px] font-bold ${color} mt-1 text-right">${icon} ${diff > 0 ? '+'+diff : diff}</div>
+         </div>`;
+      }).join('');
+      document.getElementById('cmpStatGrid').innerHTML = htmlStats;
+      if (window.__cmpA) window.__cmpA.destroy(); if (window.__cmpB) window.__cmpB.destroy();
+      const cfg = (s) => ({ type: 'doughnut', data: { labels: ['Operational', 'Developmental', 'With LOI', 'No LOI'], datasets: [{ data: [s.op, s.dev, s.loi, s.no], backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } } } });
+      window.__cmpA = new Chart(document.getElementById('cmpChartA'), cfg(compareState.statsA));
+      window.__cmpB = new Chart(document.getElementById('cmpChartB'), cfg(compareState.statsB));
+      
+      const rowHtml = compareState.changedRows.map((r, i) => `
+        <tr class="border-b border-slate-50 dark:border-slate-800">
+          <td class="px-5 py-4 font-black text-slate-800 dark:text-slate-200">${r.Municipality}<div class="text-[9px] text-slate-400 font-normal uppercase">${r.Province}</div></td>
+          <td class="px-5 py-4 text-xs bg-red-50 dark:bg-red-900/10 text-red-600 border-l dark:border-slate-800">${r.oldStatus||'-'}</td>
+          <td class="px-5 py-4 text-xs font-black bg-green-50 dark:bg-green-900/10 text-green-700">${r.newStatus||'-'}</td>
+          <td class="px-5 py-4 text-right"><button onclick="viewSingleDiff(${i})" class="text-[10px] bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded font-bold hover:bg-dict-blue hover:text-white transition">View Details</button></td>
+        </tr>`).join('');
+        
+      document.getElementById('cmpChangedTableFull').innerHTML = rowHtml || `<tr><td class="px-5 py-8 text-center text-slate-500" colspan="4">No Status Changes Detected</td></tr>`;
+    }
+
+    // --- NEW: View All Function ---
+    function viewAllChanges() {
+        if (!compareState || !compareState.changedRows) return;
+        document.getElementById('allChangesCount').innerText = compareState.changedRows.length;
+        const rowHtml = compareState.changedRows.map((r, i) => `
+        <tr class="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+          <td class="px-6 py-4 font-black text-slate-800 dark:text-slate-200">${r.Municipality}<div class="text-[9px] text-slate-400 font-normal uppercase">${r.Province}</div></td>
+          <td class="px-6 py-4 text-xs bg-red-50 dark:bg-red-900/10 text-red-600 border-l dark:border-slate-800">${r.oldStatus||'-'}</td>
+          <td class="px-6 py-4 text-xs font-black bg-green-50 dark:bg-green-900/10 text-green-700">${r.newStatus||'-'}</td>
+          <td class="px-6 py-4 text-right"><button onclick="viewSingleDiff(${i})" class="text-[10px] bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded font-bold hover:bg-dict-blue hover:text-white transition">View Details</button></td>
+        </tr>`).join('');
+        
+        document.getElementById('allChangesBody').innerHTML = rowHtml || `<tr><td class="px-6 py-12 text-center text-slate-500" colspan="4">No Status Changes Detected</td></tr>`;
+        openModal('modalAllChanges');
+    }
+
+    function viewSingleDiff(idx) {
+        const item = compareState.changedRows[idx];
+        document.getElementById('singleDiffTitle').innerText = `Changes: ${item.Municipality}`;
+        const tbody = document.getElementById('singleDiffBody');
+        tbody.innerHTML = ''; 
+
+        // 1. Group Diffs by Section
+        const groups = { "Overall Remarks": [] };
+        Object.keys(EDIT_FORM_CONFIG).forEach(sec => groups[sec] = []);
+        groups["Other Changes"] = [];
+
+        item.diffs.forEach(d => {
+            const k = d.key.toLowerCase();
+            if (k.includes('overall remarks') || k === 'remarks') {
+                groups["Overall Remarks"].push(d);
+                return;
+            }
+            let found = false;
+            for (const [secName, fields] of Object.entries(EDIT_FORM_CONFIG)) {
+                const match = fields.some(f => f.keys.some(fk => fk.toLowerCase() === k));
+                if (match || fields.some(f => f.label.toLowerCase() === k)) {
+                      groups[secName].push(d);
+                      found = true;
+                      break;
+                }
+            }
+            if (!found) groups["Other Changes"].push(d);
+        });
+
+        // 2. Render Sections in Order
+        const order = ["Overall Remarks", ...Object.keys(EDIT_FORM_CONFIG), "Other Changes"];
+
+        order.forEach(sec => {
+            const diffs = groups[sec];
+            if (diffs && diffs.length > 0) {
+                const isRemarks = sec === "Overall Remarks";
+                const headerClass = isRemarks 
+                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 border-l-4 border-blue-500" 
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300";
+
+                tbody.innerHTML += `
+                    <tr class="${headerClass} border-b dark:border-slate-700">
+                        <td colspan="3" class="px-4 py-2 text-xs font-black uppercase tracking-widest">${sec}</td>
+                    </tr>`;
+
+                diffs.forEach(d => {
+                      tbody.innerHTML += `
+                      <tr class="bg-white dark:bg-slate-900">
+                        <td class="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 border-b dark:border-slate-800 text-[11px] uppercase align-top">${d.key}</td>
+                        <td class="px-4 py-3 text-red-600 bg-red-50 dark:bg-red-900/20 border-b dark:border-slate-800 break-words text-xs align-top">${d.old || '<em class="opacity-50">Empty</em>'}</td>
+                        <td class="px-4 py-3 text-green-600 bg-green-50 dark:bg-green-900/20 border-b dark:border-slate-800 break-words text-xs align-top">${d.new || '<em class="opacity-50">Empty</em>'}</td>
+                      </tr>`;
+                });
+            }
+        });
+
+        openModal('modalSingleDiff');
+    }
+    
+    function exitCompareMode() { document.getElementById('compareBanner').classList.add('hidden'); compareState = null; CURRENT_VIEW_DB = LIVE_DB; renderDashboard(); if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { if (!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); } }
+    function switchTab(t) { document.querySelectorAll('.view-section').forEach(e => e.classList.add('hidden')); document.getElementById(`view-${t}`).classList.remove('hidden'); document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active')); document.getElementById(`btn-${t}`).classList.add('active'); if (t === 'map') initMap(); }
+    function sortData(col) { if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; } resetPg(); applyFilters(); }
+    function changePg(dir) { curPage += dir; if (curPage < 1) curPage = 1; applyFilters(); }
+    function toggleTheme() { document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); renderCharts(); if (compareState && document.getElementById('modalCompare').classList.contains('active')) renderCompareModal(); }
+    function toggleSettings() { document.getElementById('settingsBar').classList.toggle('hidden'); }
+    function populateYearFilter() { const years = new Set(); CURRENT_VIEW_DB.forEach(d => { if (d.OpDate) { const y = d.OpDate.match(/\d{4}/); if (y) years.add(y[0]); } }); document.getElementById('filterYear').innerHTML = '<option value="All">All Years</option>' + [...years].sort().map(y => `<option value="${y}">${y}</option>`).join(''); }
+ </script>
+</body>
+</html>
