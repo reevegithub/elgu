@@ -32,29 +32,42 @@
 
   <style>
     body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+    
+    /* Ensure no default background colors hide our image */
+    html, body { background: transparent !important; }
+
     * { transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .dark ::-webkit-scrollbar-thumb { background: #475569; }
 
-    .glass-panel { background: white; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .dark .glass-panel { background: #1e293b; border-color: #334155; }
+    .glass-panel { 
+        background: rgba(255, 255, 255, 0.65); 
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.6); 
+        border-radius: 1rem; 
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+    }
+    .dark .glass-panel { 
+        background: rgba(30, 41, 59, 0.6); 
+        border-color: rgba(255, 255, 255, 0.1); 
+    }
 
     .nav-tab.active { background: #003399; color: white; border-color: #003399; }
     .dark .nav-tab.active { background: #3b82f6; border-color: #3b82f6; color: white; }
 
     .sb-btn { width: 100%; text-align: left; padding: 12px 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; border-radius: 12px; color: #64748b; background: transparent; cursor: pointer; margin-bottom: 4px; }
     .dark .sb-btn { color: #94a3b8; }
-    .sb-btn:hover { background: #f1f5f9; }
-    .dark .sb-btn:hover { background: #334155; }
+    .sb-btn:hover { background: rgba(241, 245, 249, 0.8); }
+    .dark .sb-btn:hover { background: rgba(51, 65, 85, 0.5); }
     .sb-btn.active { background: #eff6ff; color: #003399; font-weight: 800; }
     .dark .sb-btn.active { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
     
     .sb-pill { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #e2e8f0; color: #475569; }
     .dark .sb-pill { background: #334155; color: #cbd5e1; }
 
-    .section-header { background: #f8fafc; color: #475569; padding: 8px 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; border-radius: 6px; margin-top: 16px; margin-bottom: 10px; border-left: 3px solid #003399; display: flex; align-items: center; gap: 8px; }
-    .dark .section-header { background: #0f172a; color: #94a3b8; border-left-color: #3b82f6; }
+    .section-header { background: rgba(248, 250, 252, 0.8); color: #475569; padding: 8px 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; border-radius: 6px; margin-top: 16px; margin-bottom: 10px; border-left: 3px solid #003399; display: flex; align-items: center; gap: 8px; }
+    .dark .section-header { background: rgba(15, 23, 42, 0.6); color: #94a3b8; border-left-color: #3b82f6; }
 
     .badge { font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; white-space: nowrap; }
 
@@ -72,7 +85,6 @@
     .ai-msg { background: white; color: #334155; align-self: flex-start; border: 1px solid #e2e8f0; border-bottom-left-radius: 2px; }
     .dark .ai-msg { background: #1e293b; border-color: #334155; color: #e2e8f0; }
 
-    /* Mobile Drawer */
     .mobile-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 50; }
     .mobile-drawer.open { transform: translateX(0); }
     .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -80,8 +92,13 @@
   </style>
 </head>
 
-<body class="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
+<body class="h-[100dvh] flex flex-col overflow-hidden text-slate-800 dark:text-slate-100">
 
+  <div style="background-image: url('elgu-bg.jpg');" 
+       class="fixed inset-0 z-[-2] w-full h-full bg-cover bg-bottom bg-no-repeat bg-fixed">
+  </div>
+
+  <div class="fixed inset-0 z-[-1] w-full h-full bg-slate-50/85 dark:bg-slate-950/90 backdrop-blur-[2px]"></div>
   <div id="forceUpdateModal" class="fixed inset-0 z-[9999] hidden flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-md p-6 text-center animate-in fade-in duration-300">
     <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-700 transform transition-all scale-100">
       <div class="w-20 h-20 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -103,13 +120,13 @@
     <div id="loaderText" class="text-xs font-black text-dict-blue dark:text-blue-400 animate-pulse uppercase tracking-widest">Syncing Data...</div>
   </div>
 
-  <div class="md:hidden h-16 bg-white dark:bg-slate-900 border-b dark:border-slate-800 flex items-center justify-between px-4 shrink-0 z-30">
+  <div class="md:hidden h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b dark:border-slate-800 flex items-center justify-between px-4 shrink-0 z-30">
       <button onclick="toggleDrawer()" class="p-2 text-slate-500"><i class="fa-solid fa-bars text-xl"></i></button>
       <span class="font-black text-dict-blue dark:text-blue-400">eLGU Monitoring</span>
       <button onclick="switchTab('ai')" class="p-2 text-indigo-600"><i class="fa-solid fa-sparkles"></i></button>
   </div>
 
-  <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-16 hidden md:flex items-center justify-between px-6 z-30 shrink-0 shadow-sm">
+  <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 h-16 hidden md:flex items-center justify-between px-6 z-30 shrink-0 shadow-sm">
     <div class="flex items-center gap-4">
       <img src="https://upload.wikimedia.org/wikipedia/commons/a/aa/DICT-Logo-icon_only.png" class="h-10 w-auto">
       <div class="h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
@@ -135,13 +152,12 @@
   <div class="flex flex-1 overflow-hidden relative">
     <div id="drawerOverlay" class="drawer-overlay md:hidden" onclick="toggleDrawer()"></div>
 
-    <aside id="sidebar" class="mobile-drawer md:relative md:translate-x-0 md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-50 shadow-2xl md:shadow-none">
+    <aside id="sidebar" class="mobile-drawer md:relative md:translate-x-0 md:w-64 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-50 shadow-2xl md:shadow-none">
       <div class="p-4 md:hidden flex justify-between items-center border-b dark:border-slate-800">
           <span class="font-black">Menu</span>
           <button onclick="toggleDrawer()"><i class="fa-solid fa-xmark text-xl"></i></button>
       </div>
       <div class="p-6 flex-1 overflow-y-auto">
-        
         <div class="md:hidden mb-6 pb-6 border-b border-slate-100 dark:border-slate-800 space-y-2">
            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Navigation</div>
            <div class="grid grid-cols-2 gap-2">
@@ -152,7 +168,6 @@
               <button onclick="toggleSettings(); toggleDrawer()" class="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs border dark:border-slate-700 flex items-center justify-center gap-2"><i class="fa-solid fa-gear"></i> Settings</button>
            </div>
         </div>
-
         <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2">Filter by Province</div>
         <div id="sidebar-nav" class="space-y-1"></div>
         <div id="snapshotBanner" class="hidden mt-6 p-4 rounded-xl border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-900/40">
@@ -162,13 +177,13 @@
           </div>
         </div>
       </div>
-      <div class="p-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-2">
+      <div class="p-6 bg-slate-50/50 dark:bg-slate-950/50 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-2">
         <button onclick="saveSnapshot()" class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-dict-blue dark:hover:border-blue-500 text-slate-600 dark:text-slate-300 font-black text-xs py-3 rounded-xl shadow-sm flex items-center justify-center gap-2 transition"><i class="fa-solid fa-floppy-disk"></i> Save Report</button>
         <button onclick="openModal('modalHistory')" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-black text-xs py-3 rounded-xl shadow flex items-center justify-center gap-2 transition"><i class="fa-solid fa-clock-rotate-left"></i> History / Compare</button>
       </div>
     </aside>
 
-    <main id="view-dash" class="view-section flex-1 bg-slate-50 dark:bg-slate-950 p-4 md:p-8 overflow-y-auto pb-24">
+    <main id="view-dash" class="view-section flex-1 bg-transparent p-4 md:p-8 overflow-y-auto pb-24">
       <div id="compareBanner" class="hidden bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-900/50 p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row justify-between md:items-center gap-3 relative overflow-hidden">
         <div class="absolute left-0 top-0 bottom-0 w-1 bg-orange-500"></div>
         <div class="pl-2">
@@ -208,23 +223,23 @@
       </div>
 
       <div class="glass-panel flex flex-col min-h-[500px]">
-        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col md:flex-row gap-3 items-center sticky top-0 z-20 rounded-t-2xl">
+        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 flex flex-col md:flex-row gap-3 items-center sticky top-0 z-20 rounded-t-2xl backdrop-blur-sm">
           <h3 class="font-black text-sm flex items-center gap-2"><i class="fa-solid fa-list text-slate-400"></i> Master List</h3>
           <div class="flex flex-col md:flex-row gap-2 ml-auto w-full md:w-auto">
-            <select id="filterStatus" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-slate-50 dark:bg-slate-800 outline-none w-full md:w-32 focus:ring-1 ring-blue-500">
+            <select id="filterStatus" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-white/80 dark:bg-slate-800/80 outline-none w-full md:w-32 focus:ring-1 ring-blue-500">
               <option value="All">All Status</option><option value="Operational">Operational</option><option value="Developmental">Developmental</option><option value="With LOI">With LOI</option><option value="No LOI">No LOI</option>
             </select>
-            <select id="filterYear" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-slate-50 dark:bg-slate-800 outline-none w-full md:w-32 focus:ring-1 ring-blue-500"><option value="All">All Years</option></select>
-            <div class="relative w-full md:w-48"><i class="fa-solid fa-search absolute left-3 top-2 text-slate-400 text-xs"></i><input type="text" id="searchBox" onkeyup="resetPg();applyFilters()" placeholder="Search LGUs..." class="pl-8 pr-4 py-1.5 bg-slate-50 dark:bg-slate-800 border rounded-lg text-xs outline-none w-full focus:ring-1 ring-blue-500"></div>
+            <select id="filterYear" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-white/80 dark:bg-slate-800/80 outline-none w-full md:w-32 focus:ring-1 ring-blue-500"><option value="All">All Years</option></select>
+            <div class="relative w-full md:w-48"><i class="fa-solid fa-search absolute left-3 top-2 text-slate-400 text-xs"></i><input type="text" id="searchBox" onkeyup="resetPg();applyFilters()" placeholder="Search LGUs..." class="pl-8 pr-4 py-1.5 bg-white/80 dark:bg-slate-800/80 border rounded-lg text-xs outline-none w-full focus:ring-1 ring-blue-500"></div>
           </div>
         </div>
         <div class="overflow-x-auto flex-1 w-full relative">
           <table class="w-full text-left text-sm border-collapse">
-            <thead class="bg-slate-50 dark:bg-slate-900 text-[10px] text-slate-500 uppercase font-black border-b border-slate-100 dark:border-slate-800 sticky top-0 z-10">
+            <thead class="bg-slate-50/50 dark:bg-slate-900/50 text-[10px] text-slate-500 uppercase font-black border-b border-slate-100 dark:border-slate-800 sticky top-0 z-10 backdrop-blur-sm">
               <tr>
-                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortData('Province')">Province <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
-                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortData('Municipality')">Municipality <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
-                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortData('Status')">Status <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Province')">Province <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Municipality')">Municipality <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Status')">Status <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
                 <th class="px-6 py-4">Op. Date</th>
                 <th class="px-6 py-4">Remarks</th>
                 <th class="px-6 py-4 text-right">Actions</th>
@@ -233,19 +248,19 @@
             <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
           </table>
         </div>
-        <div class="px-5 py-3 border-t bg-slate-50 dark:bg-slate-900 flex justify-between items-center text-xs font-black rounded-b-2xl shrink-0">
+        <div class="px-5 py-3 border-t bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center text-xs font-black rounded-b-2xl shrink-0 backdrop-blur-sm">
           <div class="text-slate-500"><span id="pgStart">0</span>-<span id="pgEnd">0</span> of <span id="pgTotal">0</span></div>
           <div class="flex gap-2">
-            <button onclick="changePg(-1)" class="px-3 py-1 rounded bg-white dark:bg-slate-800 border shadow-sm transition hover:bg-slate-100">PREV</button>
-            <button onclick="changePg(1)" class="px-3 py-1 rounded bg-white dark:bg-slate-800 border shadow-sm transition hover:bg-slate-100">NEXT</button>
+            <button onclick="changePg(-1)" class="px-3 py-1 rounded bg-white/80 dark:bg-slate-800/80 border shadow-sm transition hover:bg-slate-100">PREV</button>
+            <button onclick="changePg(1)" class="px-3 py-1 rounded bg-white/80 dark:bg-slate-800/80 border shadow-sm transition hover:bg-slate-100">NEXT</button>
           </div>
         </div>
       </div>
     </main>
 
-    <main id="view-map" class="view-section hidden flex-1 relative bg-slate-100">
+    <main id="view-map" class="view-section hidden flex-1 relative bg-transparent">
       <div id="map" class="h-full w-full"></div>
-      <div class="absolute bottom-24 left-4 md:bottom-8 bg-white dark:bg-slate-900 p-4 rounded-xl shadow-xl z-[999] text-[10px] border dark:border-slate-700 w-auto max-w-[200px]">
+      <div class="absolute bottom-24 left-4 md:bottom-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-4 rounded-xl shadow-xl z-[999] text-[10px] border dark:border-slate-700 w-auto max-w-[200px]">
         <div class="font-black mb-3 uppercase text-slate-500 tracking-widest border-b pb-2">Status Legend</div>
         <div class="grid grid-cols-1 gap-2">
            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:#22c55e; box-shadow: 0 0 4px #22c55e"></span> Operational</div>
@@ -256,13 +271,13 @@
       </div>
     </main>
 
-    <main id="view-ai" class="view-section hidden flex-1 flex flex-col p-2 md:p-8 bg-slate-50 dark:bg-slate-950 overflow-hidden h-full">
+    <main id="view-ai" class="view-section hidden flex-1 flex flex-col p-2 md:p-8 bg-transparent overflow-hidden h-full">
       <div class="max-w-4xl mx-auto w-full h-full flex flex-col">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex-1 shadow-sm overflow-hidden flex flex-col">
-            <div class="p-4 border-b bg-slate-50 dark:bg-slate-950 text-xs font-black uppercase text-slate-500 tracking-widest">AI Data Analyst</div>
-            <div id="chatContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-slate-900/50"></div>
-            <div class="p-4 bg-white dark:bg-slate-900 border-t flex items-center gap-3">
-                <input type="text" id="chatInput" placeholder="Ask about the data..." class="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl outline-none text-sm focus:ring-2 ring-indigo-500 transition" onkeypress="if(event.key==='Enter')sendChat()">
+        <div class="bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl flex-1 shadow-sm overflow-hidden flex flex-col">
+            <div class="p-4 border-b bg-slate-50/50 dark:bg-slate-950/50 text-xs font-black uppercase text-slate-500 tracking-widest">AI Data Analyst</div>
+            <div id="chatContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent"></div>
+            <div class="p-4 bg-white/50 dark:bg-slate-900/50 border-t flex items-center gap-3">
+                <input type="text" id="chatInput" placeholder="Ask about the data..." class="flex-1 px-4 py-3 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl outline-none text-sm focus:ring-2 ring-indigo-500 transition" onkeypress="if(event.key==='Enter')sendChat()">
                 <button onclick="sendChat()" class="bg-indigo-600 text-white w-12 h-12 rounded-xl hover:bg-indigo-700 transition flex items-center justify-center shadow-lg shadow-indigo-500/20"><i class="fa-solid fa-paper-plane"></i></button>
             </div>
         </div>
@@ -582,7 +597,7 @@
 
     function renderDashboard() { renderSidebar(); updateStats(); renderCharts(); populateYearFilter(); resetPg(); applyFilters(); }
 
-function renderSidebar() {
+    function renderSidebar() {
       const nav = document.getElementById('sidebar-nav');
       const provs = [...new Set(LIVE_DB.map(x => x.Province).filter(Boolean))].sort();
       
@@ -762,7 +777,7 @@ function renderSidebar() {
       const tbody = document.getElementById('tableBody'); tbody.innerHTML = '';
       data.forEach((row) => {
         const c = statusColor(row.Status); const gIdx = LIVE_DB.findIndex(x => x.ID === row.ID);
-        tbody.innerHTML += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition border-b border-slate-50 dark:border-slate-800/50"><td class="px-6 py-4 font-black text-slate-400 text-[10px] uppercase">${row.Province || '-'}</td><td class="px-6 py-4 font-bold text-slate-800 dark:text-slate-200 text-xs">${row.Municipality}</td><td class="px-6 py-4"><span class="badge" style="background:${c}20; color:${c}">${row.Status || '-'}</span></td><td class="px-6 py-4 text-xs font-mono text-slate-500">${row.OpDate || '-'}</td><td class="px-6 py-4 text-[10px] text-slate-400 truncate max-w-[150px]">${row.Remarks || '-'}</td><td class="px-6 py-4 text-right flex justify-end gap-2"><button onclick="openViewModal(${gIdx})" class="text-[10px] font-black text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:text-dict-blue uppercase tracking-tighter transition">View</button><button onclick="openEditModal(${gIdx})" class="text-[10px] font-black text-white bg-dict-blue px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-700 uppercase tracking-tighter transition">Edit</button></td></tr>`;
+        tbody.innerHTML += `<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition border-b border-slate-50 dark:border-slate-800/50"><td class="px-6 py-4 font-black text-slate-400 text-[10px] uppercase">${row.Province || '-'}</td><td class="px-6 py-4 font-bold text-slate-800 dark:text-slate-200 text-xs">${row.Municipality}</td><td class="px-6 py-4"><span class="badge" style="background:${c}20; color:${c}">${row.Status || '-'}</span></td><td class="px-6 py-4 text-xs font-mono text-slate-500">${row.OpDate || '-'}</td><td class="px-6 py-4 text-[10px] text-slate-400 truncate max-w-[150px]">${row.Remarks || '-'}</td><td class="px-6 py-4 text-right flex justify-end gap-2"><button onclick="openViewModal(${gIdx})" class="text-[10px] font-black text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:text-dict-blue uppercase tracking-tighter transition">View</button><button onclick="openEditModal(${gIdx})" class="text-[10px] font-black text-white bg-dict-blue px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-700 uppercase tracking-tighter transition">Edit</button></td></tr>`;
       });
     }
 
@@ -1185,4 +1200,3 @@ function renderSidebar() {
  </script>
 </body>
 </html>
-
