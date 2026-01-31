@@ -582,10 +582,17 @@
 
     function renderDashboard() { renderSidebar(); updateStats(); renderCharts(); populateYearFilter(); resetPg(); applyFilters(); }
 
-    function renderSidebar() {
+function renderSidebar() {
       const nav = document.getElementById('sidebar-nav');
       const provs = [...new Set(LIVE_DB.map(x => x.Province).filter(Boolean))].sort();
-      const allBtn = `<button onclick="filterProv('All')" class="sb-btn ${activeFilter === 'All' ? 'active' : ''}"><span class="flex items-center gap-2"><i class="fa-solid fa-globe opacity-70"></i> <span>All Provinces</span></span><span class="sb-pill">${(activeFilter === 'All' ? (CURRENT_VIEW_DB?.length || LIVE_DB.length) : LIVE_DB.length)}</span></button>`;
+      
+      // FIX: Changed the pill logic to always show ${LIVE_DB.length}
+      // This ensures it always shows the total count, regardless of what is currently filtered.
+      const allBtn = `<button onclick="filterProv('All')" class="sb-btn ${activeFilter === 'All' ? 'active' : ''}">
+          <span class="flex items-center gap-2"><i class="fa-solid fa-globe opacity-70"></i> <span>All Provinces</span></span>
+          <span class="sb-pill">${LIVE_DB.length}</span>
+      </button>`;
+      
       nav.innerHTML = allBtn + provs.map(p => `<button onclick="filterProv('${escapeQuotes(p)}')" class="sb-btn ${activeFilter === p ? 'active' : ''}"><span class="truncate">${p}</span><span class="sb-pill">${LIVE_DB.filter(d => d.Province === p).length}</span></button>`).join('');
     }
 
@@ -1178,3 +1185,4 @@
  </script>
 </body>
 </html>
+
