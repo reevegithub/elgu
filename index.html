@@ -13,6 +13,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -179,6 +182,12 @@
       </div>
       <div class="p-6 bg-slate-50/50 dark:bg-slate-950/50 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-2">
         <button onclick="saveSnapshot()" class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-dict-blue dark:hover:border-blue-500 text-slate-600 dark:text-slate-300 font-black text-xs py-3 rounded-xl shadow-sm flex items-center justify-center gap-2 transition"><i class="fa-solid fa-floppy-disk"></i> Save Report</button>
+        
+        <div class="grid grid-cols-2 gap-2">
+            <button onclick="exportReport('csv')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] py-2.5 rounded-xl shadow flex items-center justify-center gap-1.5 transition"><i class="fa-solid fa-file-csv"></i> EXPORT CSV</button>
+            <button onclick="exportReport('pdf')" class="w-full bg-red-600 hover:bg-red-700 text-white font-black text-[10px] py-2.5 rounded-xl shadow flex items-center justify-center gap-1.5 transition"><i class="fa-solid fa-file-pdf"></i> EXPORT PDF</button>
+        </div>
+
         <button onclick="openModal('modalHistory')" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-black text-xs py-3 rounded-xl shadow flex items-center justify-center gap-2 transition"><i class="fa-solid fa-clock-rotate-left"></i> History / Compare</button>
       </div>
     </aside>
@@ -424,8 +433,7 @@
     /* --- CONFIGURATION --- */
     const DOWNLOAD_URL = "https://drive.google.com/drive/folders/1qA2OZqQSDru05aIzgFPhCGicESXp22u1"; 
     const CURRENT_VERSION = "1.10"; 
-    // FIXED_AI_KEY REMOVED (Handled in Backend now)
-
+    
     let LIVE_DB = [], CURRENT_VIEW_DB = [], API_URL = localStorage.getItem('elgu_api_url') || '';
     let activeFilter = 'All', map = null, markers = [];
     let chartInstPie = null, chartInstBar = null, chartInstYear = null, chartModalInst = null;
@@ -601,8 +609,6 @@
       const nav = document.getElementById('sidebar-nav');
       const provs = [...new Set(LIVE_DB.map(x => x.Province).filter(Boolean))].sort();
       
-      // FIX: Changed the pill logic to always show ${LIVE_DB.length}
-      // This ensures it always shows the total count, regardless of what is currently filtered.
       const allBtn = `<button onclick="filterProv('All')" class="sb-btn ${activeFilter === 'All' ? 'active' : ''}">
           <span class="flex items-center gap-2"><i class="fa-solid fa-globe opacity-70"></i> <span>All Provinces</span></span>
           <span class="sb-pill">${LIVE_DB.length}</span>
@@ -645,12 +651,10 @@
     function renderCharts() {
       const s = updateStats();
       const txt = document.documentElement.classList.contains('dark') ? '#94a3b8' : '#475569';
-      const totalLGUs = CURRENT_VIEW_DB.length; // Capture total count for tooltip reference
+      const totalLGUs = CURRENT_VIEW_DB.length; 
       window.__chartConfigs = window.__chartConfigs || {};
       
       const standardTooltip = { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) label += ': '; let val = context.raw; let total = context.chart._metasets[context.datasetIndex].total; if(context.chart.config.type === 'bar') { total = 0; context.chart.data.datasets.forEach(ds => total += ds.data[context.dataIndex]); } let pct = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%'; return `${label}${val} out of ${total} (${pct})`; } } };
-
-      // TIMELINE TOOLTIP: Compare segment to Total LGUs
       const timelineTooltip = { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) label += ': '; let val = context.raw; let pct = totalLGUs > 0 ? ((val / totalLGUs) * 100).toFixed(1) + '%' : '0%'; return `${label}${val} out of ${totalLGUs} Total LGUs (${pct})`; } } };
 
       if (chartInstPie) chartInstPie.destroy();
@@ -658,7 +662,6 @@
       chartInstPie = new Chart(document.getElementById('chartPie'), cfgPie);
       window.__chartConfigs.pie = { title: 'Status Overview', config: cfgPie, useStandardTooltip: true };
 
-      // REVISED TIMELINE LOGIC: STACKED + LINE OVERLAY
       const dateRows = CURRENT_VIEW_DB.filter(d => /\d{4}/.test(String(d.OpDate||"")));
       const yearlyData = {};
       dateRows.forEach(d => {
@@ -669,7 +672,7 @@
               if(st.includes('operational')) yearlyData[y].op++;
               else if(st.includes('developmental')) yearlyData[y].dev++;
               else if(st.includes('with loi') || st.includes('loi')) yearlyData[y].loi++;
-              else yearlyData[y].no++; // No LOI or Others
+              else yearlyData[y].no++; 
           }
       });
       const yLabels = Object.keys(yearlyData).sort();
@@ -686,7 +689,7 @@
           dDev.push(accDev);
           dLoi.push(accLoi);
           dNo.push(accNo);
-          dOverall.push(accOp + accDev); // Combined Op + Dev
+          dOverall.push(accOp + accDev); 
       });
 
       if (chartInstYear) chartInstYear.destroy();
@@ -711,7 +714,6 @@
       chartInstYear = new Chart(document.getElementById('chartYear'), cfgYear);
       window.__chartConfigs.year = { title: 'Timeline', config: cfgYear, useTotalLGUTooltip: true };
 
-      // PROVINCIAL LOGIC: STACKED
       const provs = [...new Set(CURRENT_VIEW_DB.map(x => x.Province).filter(Boolean))].sort().slice(0, 30);
       const ds = { op: [], dev: [], loi: [], no: [] };
       provs.forEach(p => { const sub = CURRENT_VIEW_DB.filter(d => d.Province === p); let ls = getStatsFrom(sub); ds.op.push(ls.op); ds.dev.push(ls.dev); ds.loi.push(ls.loi); ds.no.push(ls.no); });
@@ -782,7 +784,6 @@
     }
 
     function initMap() {
-      // FIX: Check if container is visible before loading
       if (document.getElementById('view-map').classList.contains('hidden')) return;
       if (map) map.remove(); 
       map = L.map('map').setView([17.2, 121.0], 8);
@@ -805,7 +806,6 @@
       });
     }
 
-    /* --- UPDATED AI FUNCTION: Backend now handles the Key --- */
     async function sendChat() {
       const i = document.getElementById('chatInput'); const txt = i.value.trim(); if (!txt) return;
       const c = document.getElementById('chatContainer');
@@ -813,12 +813,8 @@
       
       const loader = document.createElement('div'); loader.className = "ai-msg chat-bubble"; loader.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Analyzing...'; c.appendChild(loader); c.scrollTop = c.scrollHeight;
       
-      // BUILD CONTEXT WITH ACTUAL DATA ROWS
-      // We limit to current filtered view to make it relevant
       const stats = getStatsFrom(CURRENT_VIEW_DB);
-      
-      // Create a CSV-like list of the data (Limit to avoid token overflow if list is huge)
-      const limit = 400; // Increased limit for better context
+      const limit = 400; 
       const dataRows = CURRENT_VIEW_DB.slice(0, limit).map(d => `- ${d.Municipality} (${d.Province}): ${d.Status}. Remarks: ${d.Remarks}`).join('\n');
       
       const context = `
@@ -837,7 +833,6 @@
             method: 'POST',
             body: JSON.stringify({
               action: 'askAI',
-              // KEY IS NO LONGER SENT HERE
               prompt: context
             })
           });
@@ -863,7 +858,6 @@
     function openViewModal(idx) { 
         const d = LIVE_DB[idx]; if (!d) return; 
         
-        // Data Keys to display as text fields
         const viewSections = { 
             "LGU Profile": ["PROVINCE", "REGION", "LEVEL", "INCOME CLASS", "Latitude", "Longtitude", "eLGU Version", "Date"], 
             "eLGU Onboarding Documents": ["Letter of Intent", "LOI Date", "E-READINESS SURVEY", "eReadiness Status", "SB Resolution", "SB Date", "Memorandum of Understanding", "MOU Status"], 
@@ -873,7 +867,6 @@
             "Go Live Preparations": ["Go Live Checklist", "OPERATIONAL DATE"] 
         };
 
-        // Attachment grouping configuration (New logic)
         const attachmentMap = {
           "LGU Profile": ["FOLDER LINK"],
           "eLGU Onboarding Documents": ["LOI LINK", "SB LINK", "MOU LINK", "E-READINESS SURVERY LINK", "E-READINESS SURVEY LINK"],
@@ -889,7 +882,6 @@
         
         const cont = document.getElementById('sectionedContent'); cont.innerHTML = ""; 
         
-        // --- 1. OVERALL REMARKS SECTION (MOVED TO TOP) ---
         const remKey = Object.keys(d._raw).find(x => x.toLowerCase().includes('overall remarks')); 
         const remVal = remKey ? d._raw[remKey] : '';
         
@@ -901,31 +893,25 @@
             </div>`;
         }
         
-        // --- 2. OTHER SECTIONS LOOP ---
         for (const [sec, fields] of Object.entries(viewSections)) { 
             let html = `<div class="section-header">${sec}</div><div class="grid grid-cols-2 gap-x-6 gap-y-4 mb-2">`; 
             
-            // Render Text Fields
             fields.forEach(f => { 
                 let val = '-'; let configEntry = null;
                 for (const section of Object.values(EDIT_FORM_CONFIG)) { const entry = section.find(item => item.label === f || item.keys.includes(f)); if(entry) { configEntry = entry; break; } }
                 if(configEntry) { val = findValueInRow(d._raw, configEntry.keys).value || '-'; } else { const k = Object.keys(d._raw).find(rk => rk.toLowerCase().includes(f.toLowerCase()) || f.toLowerCase().includes(rk.toLowerCase())); val = k ? d._raw[k] : '-'; }
                 
-                // UNIFORM STYLE: All labels now use the same style, no specific blue border for "Main Headers"
                 const labelClass = "text-[10px] font-bold text-slate-400 block uppercase mb-1"; 
                 html += `<div><span class="${labelClass}">${f}</span><span class="text-xs font-semibold dark:text-white break-words">${val}</span></div>`; 
             }); 
             html += `</div>`;
 
-            // Render Attachments specific to this section
             const targetLinks = attachmentMap[sec] || [];
             const foundLinks = [];
             targetLinks.forEach(linkKey => {
-                // Find matching key in raw data (fuzzy match)
                 const foundKey = Object.keys(d._raw).find(k => k.toLowerCase().includes(linkKey.toLowerCase()));
                 if(foundKey) {
                     const url = d._raw[foundKey];
-                    // Always add to list, but mark validity
                     const isValid = url && String(url).toLowerCase().startsWith('http');
                     foundLinks.push({ label: linkKey, url: url, valid: isValid });
                 }
@@ -938,13 +924,11 @@
                 
                 foundLinks.forEach(link => {
                     if (link.valid) {
-                        // Case A: Valid Link (Blue, clickable)
                         html += `<a href="${link.url}" target="_blank" class="flex flex-col items-center justify-center p-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg hover:border-dict-blue transition group">
                             <i class="fa-solid fa-paperclip text-slate-300 group-hover:text-dict-blue mb-1"></i>
                             <span class="text-[9px] font-bold uppercase text-center text-slate-500 group-hover:text-dict-blue truncate w-full">${link.label}</span>
                         </a>`;
                     } else {
-                        // Case B: Missing/Invalid Link (Red, disabled look)
                         html += `<div class="flex flex-col items-center justify-center p-2 bg-red-50/50 dark:bg-red-900/10 border border-red-300 dark:border-red-800/50 rounded-lg cursor-not-allowed opacity-75">
                             <i class="fa-solid fa-file-circle-xmark text-red-400 mb-1"></i>
                             <span class="text-[9px] font-bold uppercase text-center text-red-400 truncate w-full">${link.label}</span>
@@ -954,7 +938,7 @@
                 });
                 html += `</div></div>`;
             } else {
-                html += `<div class="mb-5"></div>`; // Spacer if no attachments defined for section
+                html += `<div class="mb-5"></div>`; 
             }
 
             cont.innerHTML += html; 
@@ -963,7 +947,6 @@
         openModal('modalDetails'); 
     }
 
-    // --- REWRITTEN openEditModal FUNCTION ---
     function openEditModal(idx) {
       const d = LIVE_DB[idx]; if (!d) return;
       const cont = document.getElementById('dynamicInputs'); cont.innerHTML = `<input type="hidden" id="editIdLock" value="${d.ID}">`;
@@ -976,7 +959,6 @@
               const safeVal = String(actualValue || "").trim();
               let inputHtml = "";
 
-              // CHECK FOR DATE
               const isDate = fieldConfig.label.includes("Date") || fieldConfig.type === "date";
 
               if (fieldConfig.type === "locked") {
@@ -988,15 +970,11 @@
                  inputHtml = `<select data-key="${targetKey}" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500">${optionsHtml}</select>`;
               }
               else if (isDate) {
-                 // Try to format existing value to YYYY-MM-DD for the date input to show it
-                 // If conversion fails, it will pass the raw string. The browser will ignore invalid date strings (show mm/dd/yyyy blank), but that is expected behavior for HTML5 date inputs.
                  let dateVal = safeVal;
                  const dateObj = new Date(safeVal);
                  
-                 // Basic validation to ensure it's not "N/A" or "-" or empty before trying to convert
                  if (safeVal && safeVal.length > 5 && !isNaN(dateObj.getTime())) {
                     try { 
-                        // Offset the timezone so dates don't shift backwards by one day
                         const offset = dateObj.getTimezoneOffset() * 60000;
                         const localISODate = new Date(dateObj.getTime() - offset).toISOString().split('T')[0];
                         dateVal = localISODate;
@@ -1016,7 +994,6 @@
       openModal('modalEdit');
     }
     
-    // --- UPDATED saveSettings ---
     function saveSettings() {
        localStorage.setItem('elgu_api_url', document.getElementById('apiUrl').value.trim());
        location.reload(); 
@@ -1046,6 +1023,7 @@
     async function loadSnapshot(name) { try { showLoading(`Loading ${name}...`); closeModal('modalHistory'); const raw = await (await fetch(`${API_URL}?action=getHistoryData&date=${encodeURIComponent(name)}`)).json(); snapshotMode = true; compareState = null; document.getElementById('compareBanner').classList.add('hidden'); CURRENT_VIEW_DB = normalizeData(raw); renderDashboard(); if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { if (!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); } document.getElementById('statusIndicator').classList.remove('hidden'); document.getElementById('statusText').innerText = 'Snapshot'; document.getElementById('snapshotBanner').classList.remove('hidden'); document.getElementById('snapshotName').innerText = name; hideLoading(); } catch (e) { hideLoading(); alert('Failed to load snapshot.'); } }
     function exitSnapshotMode() { snapshotMode = false; document.getElementById('snapshotBanner').classList.add('hidden'); CURRENT_VIEW_DB = LIVE_DB; renderDashboard(); if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { if (!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); } document.getElementById('statusText').innerText = 'Live'; }
     async function saveSnapshot() { const n = prompt("Report Name:"); if (!n) return; showLoading('Saving Snapshot...'); await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSnapshot', reportName: n, data: LIVE_DB.map(d => d._raw) }) }); hideLoading(); fetchHistoryList(); }
+    
     function exportChangedCSV() { if (!compareState || !compareState.changedRows.length) return alert('No changes.'); const rows = compareState.changedRows; const csv = ['Municipality,Province,Old Status,New Status', ...rows.map(r => [r.Municipality, r.Province, r.oldStatus, r.newStatus].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','))].join('\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `diff_${compareState.A}_vs_${compareState.B}.csv`; a.click(); }
     
     async function runComparison() {
@@ -1115,7 +1093,6 @@
       document.getElementById('cmpChangedTableFull').innerHTML = rowHtml || `<tr><td class="px-5 py-8 text-center text-slate-500" colspan="4">No Status Changes Detected</td></tr>`;
     }
 
-    // --- NEW: View All Function ---
     function viewAllChanges() {
         if (!compareState || !compareState.changedRows) return;
         document.getElementById('allChangesCount').innerText = compareState.changedRows.length;
@@ -1137,7 +1114,6 @@
         const tbody = document.getElementById('singleDiffBody');
         tbody.innerHTML = ''; 
 
-        // 1. Group Diffs by Section
         const groups = { "Overall Remarks": [] };
         Object.keys(EDIT_FORM_CONFIG).forEach(sec => groups[sec] = []);
         groups["Other Changes"] = [];
@@ -1160,7 +1136,6 @@
             if (!found) groups["Other Changes"].push(d);
         });
 
-        // 2. Render Sections in Order
         const order = ["Overall Remarks", ...Object.keys(EDIT_FORM_CONFIG), "Other Changes"];
 
         order.forEach(sec => {
@@ -1197,6 +1172,233 @@
     function toggleTheme() { document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); renderCharts(); if (compareState && document.getElementById('modalCompare').classList.contains('active')) renderCompareModal(); }
     function toggleSettings() { document.getElementById('settingsBar').classList.toggle('hidden'); }
     function populateYearFilter() { const years = new Set(); CURRENT_VIEW_DB.forEach(d => { if (d.OpDate) { const y = d.OpDate.match(/\d{4}/); if (y) years.add(y[0]); } }); document.getElementById('filterYear').innerHTML = '<option value="All">All Years</option>' + [...years].sort().map(y => `<option value="${y}">${y}</option>`).join(''); }
+ 
+    /* --- NEW EXPORT FUNCTIONS --- */
+   /* --- UPDATED EXPORT FUNCTION (Grouped Master List by Province) --- */
+    function exportReport(type) {
+        if (!CURRENT_VIEW_DB || CURRENT_VIEW_DB.length === 0) return alert("No data to export.");
+        
+        const now = new Date().toLocaleString('en-US');
+        const fileName = `eLGU_Report_${activeFilter}_${new Date().toISOString().slice(0,10)}`;
+
+        if (type === 'csv') {
+            const headers = ["ID", "Province", "Municipality", "Region", "Level", "Income Class", "Status", "Operational Date", "Remarks"];
+            const csvRows = [headers.join(',')];
+            CURRENT_VIEW_DB.forEach(row => {
+                const vals = [row.ID, row.Province, row.Municipality, row._raw['Region']||'', row._raw['Level']||'', row._raw['Income Class']||'', row.Status, row.OpDate, row.Remarks];
+                csvRows.push(vals.map(v => `"${String(v||'').replace(/"/g, '""')}"`).join(','));
+            });
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = fileName + ".csv"; a.click(); window.URL.revokeObjectURL(url);
+        } 
+        else if (type === 'pdf') {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 14;
+            let y = 14;
+
+            // --- PAGE 1: EXECUTIVE SUMMARY ---
+            // Header
+            doc.setFillColor(0, 51, 153);
+            doc.rect(0, 0, pageWidth, 24, 'F');
+            doc.setFontSize(18); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
+            doc.text("eLGU Monitoring Report", margin, 16);
+            doc.setFontSize(10); doc.setFont("helvetica", "normal");
+            doc.text(`Generated: ${now}`, margin, 21);
+            doc.text(`Filter: ${activeFilter}`, pageWidth - margin, 16, { align: 'right' });
+            y = 35;
+
+            // KPIs
+            doc.setFontSize(12); doc.setTextColor(0, 51, 153); doc.setFont("helvetica", "bold");
+            doc.text("Executive Summary", margin, y);
+            y += 8;
+            
+            const s = getStatsFrom(CURRENT_VIEW_DB);
+            const boxGap = 4;
+            const boxW = (pageWidth - (margin * 2) - (boxGap * 4)) / 5;
+            const kpiConfig = [
+                { label: "TOTAL LGUs", val: s.total, bg: [241, 245, 249], text: [71, 85, 105] },
+                { label: "OPERATIONAL", val: s.op, bg: [220, 252, 231], text: [22, 163, 74] },
+                { label: "DEVELOPMENTAL", val: s.dev, bg: [219, 234, 254], text: [37, 99, 235] },
+                { label: "WITH LOI", val: s.loi, bg: [254, 243, 199], text: [217, 119, 6] },
+                { label: "NO LOI", val: s.no, bg: [254, 226, 226], text: [220, 38, 38] }
+            ];
+
+            kpiConfig.forEach((k, i) => {
+                const bx = margin + (i * (boxW + boxGap));
+                doc.setFillColor(...k.bg); doc.setDrawColor(200, 200, 200);
+                doc.roundedRect(bx, y, boxW, 24, 2, 2, 'FD');
+                doc.setFontSize(7); doc.setTextColor(100); doc.setFont("helvetica", "bold");
+                doc.text(k.label, bx + 3, y + 8);
+                doc.setFontSize(14); doc.setTextColor(...k.text);
+                doc.text(String(k.val), bx + 3, y + 19);
+            });
+            y += 35;
+
+            // Donut Chart
+            doc.setFontSize(12); doc.setTextColor(0, 51, 153);
+            doc.text("Status Overview", margin, y);
+            doc.setLineWidth(0.5); doc.setDrawColor(0, 51, 153);
+            doc.line(margin, y + 2, pageWidth - margin, y + 2);
+            y += 10;
+
+            try {
+                const canvasPie = document.getElementById('chartPie');
+                const imgPie = canvasPie.toDataURL('image/png');
+                const ratio = canvasPie.width / canvasPie.height;
+                const pdfChartHeight = 80; 
+                const pdfChartWidth = pdfChartHeight * ratio;
+                const xPos = (pageWidth - pdfChartWidth) / 2;
+                
+                doc.addImage(imgPie, 'PNG', xPos, y, pdfChartWidth, pdfChartHeight);
+                y += pdfChartHeight + 5;
+
+                const pieTotal = s.total || 1;
+                const pieBody = [
+                    ['Operational', s.op, ((s.op/pieTotal)*100).toFixed(1) + '%'],
+                    ['Developmental', s.dev, ((s.dev/pieTotal)*100).toFixed(1) + '%'],
+                    ['With LOI', s.loi, ((s.loi/pieTotal)*100).toFixed(1) + '%'],
+                    ['No LOI', s.no, ((s.no/pieTotal)*100).toFixed(1) + '%']
+                ];
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Status', 'Count', '%']],
+                    body: pieBody,
+                    theme: 'grid',
+                    headStyles: { fillColor: [240, 240, 240], textColor: 50, fontSize: 10, halign: 'center' },
+                    bodyStyles: { fontSize: 10, textColor: 50, halign: 'center' },
+                    columnStyles: { 0: { fontStyle: 'bold', halign: 'left' } },
+                    margin: { left: pageWidth * 0.25, right: pageWidth * 0.25 }
+                });
+            } catch (e) { console.error(e); }
+
+            // --- PAGE 2: TIMELINE ---
+            doc.addPage();
+            y = margin;
+            doc.setFontSize(14); doc.setTextColor(0, 51, 153); doc.setFont("helvetica", "bold");
+            doc.text("1. Timeline Progress", margin, y);
+            y += 10;
+
+            try {
+                const imgYear = document.getElementById('chartYear').toDataURL('image/png');
+                doc.addImage(imgYear, 'PNG', margin, y, pageWidth - (margin * 2), 80);
+                y += 85;
+
+                const yearlyData = {};
+                CURRENT_VIEW_DB.forEach(d => {
+                    const yr = (String(d.OpDate||"").match(/\d{4}/)||[])[0];
+                    if(yr) {
+                        if(!yearlyData[yr]) yearlyData[yr] = { op: 0, dev: 0 };
+                        const st = (d.Status || '').toLowerCase();
+                        if(st.includes('operational')) yearlyData[yr].op++;
+                        else if(st.includes('developmental')) yearlyData[yr].dev++;
+                    }
+                });
+                const years = Object.keys(yearlyData).sort();
+                let accOp = 0, accDev = 0;
+                const timelineBody = years.map(yr => {
+                    accOp += yearlyData[yr].op; accDev += yearlyData[yr].dev;
+                    return [yr, accOp, accDev, accOp + accDev];
+                });
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Year (Cumulative)', 'Operational', 'Developmental', 'Total Active']],
+                    body: timelineBody,
+                    theme: 'striped',
+                    headStyles: { fillColor: [79, 70, 229], fontSize: 10 },
+                    bodyStyles: { fontSize: 9 },
+                    margin: { left: margin, right: margin }
+                });
+            } catch (e) { console.error(e); }
+
+            // --- PAGE 3: PROVINCIAL ---
+            doc.addPage();
+            y = margin;
+            doc.setFontSize(14); doc.setTextColor(0, 51, 153); doc.setFont("helvetica", "bold");
+            doc.text("2. Provincial Breakdown", margin, y);
+            y += 10;
+
+            try {
+                const imgBar = document.getElementById('chartBar').toDataURL('image/png');
+                doc.addImage(imgBar, 'PNG', margin, y, pageWidth - (margin * 2), 80);
+                y += 85;
+
+                const provs = [...new Set(CURRENT_VIEW_DB.map(x => x.Province).filter(Boolean))].sort();
+                const provBody = provs.map(p => {
+                    const sub = CURRENT_VIEW_DB.filter(d => d.Province === p);
+                    const stats = getStatsFrom(sub);
+                    return [p, stats.op, stats.dev, stats.loi, stats.no, stats.total];
+                });
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Province', 'Operational', 'Developmental', 'With LOI', 'No LOI', 'Total']],
+                    body: provBody,
+                    theme: 'striped',
+                    headStyles: { fillColor: [59, 130, 246], fontSize: 10 },
+                    bodyStyles: { fontSize: 9 },
+                    margin: { left: margin, right: margin }
+                });
+            } catch (e) { console.error(e); }
+
+            // --- PAGE 4: MASTER LIST (GROUPED BY PROVINCE) ---
+            doc.addPage();
+            y = margin;
+            doc.setFontSize(14); doc.setTextColor(0, 51, 153); doc.setFont("helvetica", "bold");
+            doc.text("Master List Data", margin, y);
+            y += 10;
+
+            const uniqueProvs = [...new Set(CURRENT_VIEW_DB.map(x => x.Province).filter(Boolean))].sort();
+
+            uniqueProvs.forEach((prov) => {
+                // Check if space needed for Header + Table Head
+                if (y + 25 > doc.internal.pageSize.getHeight()) {
+                    doc.addPage();
+                    y = margin;
+                }
+
+                // Province Sub-header
+                doc.setFontSize(11);
+                doc.setTextColor(50);
+                doc.setFont("helvetica", "bold");
+                doc.text(prov, margin, y);
+                y += 5;
+
+                // Filter data for this province
+                const provRows = CURRENT_VIEW_DB.filter(d => d.Province === prov);
+                const tableBody = provRows.map(row => [row.Municipality, row.Status, row.OpDate || '-', row.Remarks || '-']);
+
+                doc.autoTable({
+                    startY: y,
+                    head: [['Municipality', 'Status', 'Op. Date', 'Remarks']],
+                    body: tableBody,
+                    theme: 'grid',
+                    headStyles: { fillColor: [0, 51, 153], fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    columnStyles: { 0: {cellWidth:50, fontStyle:'bold'}, 1: {cellWidth:30}, 2: {cellWidth:30}, 3: {cellWidth:'auto'} },
+                    didParseCell: function(data) {
+                        if (data.section === 'body' && data.column.index === 1) {
+                            const t = data.cell.text[0].toLowerCase();
+                            if (t.includes('operational')) data.cell.styles.textColor = [34, 197, 94];
+                            else if (t.includes('developmental')) data.cell.styles.textColor = [59, 130, 246];
+                            else if (t.includes('no loi')) data.cell.styles.textColor = [239, 68, 68];
+                            else data.cell.styles.textColor = [245, 158, 11];
+                        }
+                    },
+                    margin: { left: margin, right: margin }
+                });
+
+                // Update Y for next loop
+                y = doc.lastAutoTable.finalY + 10;
+            });
+
+            doc.save(fileName + ".pdf");
+        }
+    }
  </script>
 </body>
 </html>
