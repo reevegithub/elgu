@@ -344,16 +344,16 @@
   </div>
 
   <div id="modalChart" class="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 backdrop-blur-md modal p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-7xl overflow-hidden flex flex-col max-h-[90vh]">
-      <div class="p-5 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950 font-black">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-7xl overflow-hidden flex flex-col h-[90vh] md:h-[85vh]">
+      <div class="p-5 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950 font-black shrink-0">
           <div id="modalChartTitle" class="text-2xl text-slate-800 dark:text-white tracking-tight">Chart Analysis</div>
           <button onclick="closeModal('modalChart')"><i class="fa-solid fa-xmark text-2xl text-slate-500 hover:text-slate-800 dark:hover:text-white transition"></i></button>
       </div>
-      <div class="p-0 flex flex-col md:flex-row h-full overflow-hidden">
-          <div class="w-full md:w-2/3 p-8 bg-white dark:bg-slate-900 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 relative">
-             <div class="h-[500px] w-full"><canvas id="chartModalCanvas"></canvas></div>
+      <div class="flex-1 overflow-y-auto md:overflow-hidden flex flex-col md:flex-row">
+          <div class="w-full md:w-2/3 p-4 md:p-8 bg-white dark:bg-slate-900 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 relative h-[40vh] md:h-full shrink-0">
+             <div class="relative h-full w-full"><canvas id="chartModalCanvas"></canvas></div>
           </div>
-          <div class="w-full md:w-1/3 p-8 bg-slate-50/50 dark:bg-slate-950/50 overflow-y-auto">
+          <div class="w-full md:w-1/3 p-4 md:p-8 bg-slate-50/50 dark:bg-slate-950/50 overflow-y-auto h-auto md:h-full">
              <div id="modalChartDetails" class="space-y-6"></div>
           </div>
       </div>
@@ -653,9 +653,9 @@
               let subInfo = '';
               if(i.ver && (i.ver.v1 > 0 || i.ver.v2 > 0 || i.ver.both > 0)) {
                   subInfo = `<div class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-2 text-xs font-bold text-slate-500">
-                     <span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Version 1: <strong>${i.ver.v1}</strong></span>
-                     <span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Version 2: <strong>${i.ver.v2}</strong></span>
-                     ${i.ver.both > 0 ? `<span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Both: <strong>${i.ver.both}</strong></span>` : ''}
+                      <span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Version 1: <strong>${i.ver.v1}</strong></span>
+                      <span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Version 2: <strong>${i.ver.v2}</strong></span>
+                      ${i.ver.both > 0 ? `<span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Both: <strong>${i.ver.both}</strong></span>` : ''}
                   </div>`;
               }
               details.innerHTML += `<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm"><div class="flex justify-between items-center mb-1"><span class="text-sm font-black uppercase ${i.c}">${i.l}</span><span class="px-3 py-1 rounded text-xs font-bold ${i.bg} ${i.c}">${getPct(i.v)}%</span></div><div class="text-3xl font-black text-slate-800 dark:text-white mb-1">${i.v}</div>${subInfo}</div>`;
@@ -701,10 +701,41 @@
       setTimeout(() => {
         if (chartModalInst) chartModalInst.destroy();
         const deep = JSON.parse(JSON.stringify(meta.config));
+        
+        // --- CUSTOM TOOLTIP LOGIC FOR "1 of 2" AND PERCENTAGE ---
+        deep.options.plugins.tooltip = {
+            callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label && context.chart.config.type !== 'pie' && context.chart.config.type !== 'doughnut') {
+                        label += ': ';
+                    }
+                    
+                    let value = context.raw;
+                    let total = 0;
+                    
+                    if (context.chart.config.type === 'pie' || context.chart.config.type === 'doughnut') {
+                        total = context.chart._metasets[context.datasetIndex].total;
+                    } else {
+                         // Sum for this specific dataset stack if bar
+                         const dataArr = context.chart.data.datasets[context.datasetIndex].data;
+                         total = dataArr.reduce((a, b) => a + b, 0); 
+                    }
+                    
+                    let pct = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                    // Format: "Label: Value of Total (Percentage)"
+                    return `${label}${value} of ${total} (${pct})`;
+                }
+            }
+        };
+
         deep.options.plugins.legend = { display: true, position: 'bottom', labels: { font: { size: 16, weight: 'bold' }, color: document.documentElement.classList.contains('dark') ? '#cbd5e1' : '#334155', padding: 20 } };
         if(!deep.options.scales) deep.options.scales = {};
         if(deep.options.scales.x) deep.options.scales.x.ticks.font = { size: 14, weight: 'bold' };
         if(deep.options.scales.y) deep.options.scales.y.ticks.font = { size: 14, weight: 'bold' };
+        // Ensure chart maintains aspect ratio in the new flex container, or fill it
+        deep.options.maintainAspectRatio = false;
+        
         chartModalInst = new Chart(document.getElementById('chartModalCanvas'), deep);
       }, 50);
     }
@@ -734,7 +765,7 @@
 
     async function sendChat() {
       const i = document.getElementById('chatInput'); const txt = i.value.trim(); if (!txt) return;
-      const isDetailed = document.getElementById('aiToggle').checked;
+      const isDetailed = document.getElementById('aiToggle').checked; // Capture toggle state
       const c = document.getElementById('chatContainer');
       const userDiv = document.createElement('div'); userDiv.className = "user-msg chat-bubble self-end animate-slide-in"; userDiv.innerText = txt; c.appendChild(userDiv); i.value = '';
       
@@ -748,7 +779,15 @@
       const context = `${systemInstruction}\nData Format: Municipality|Province|Status|Version|Remarks\n--- START DATA ---\n${csvData}\n--- END DATA ---\nUser Question: "${txt}"`;
 
       try {
-          const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'askAI', prompt: context }) });
+          // Send isDetailed flag to backend
+          const res = await fetch(API_URL, { 
+              method: 'POST', 
+              body: JSON.stringify({ 
+                  action: 'askAI', 
+                  prompt: context,
+                  isDetailed: isDetailed // <--- Sending Toggle State
+              }) 
+          });
           const json = await res.json();
           loader.remove(); 
           const rawHtml = marked.parse(json.answer || "No response.");
@@ -1118,9 +1157,9 @@
                 const years = Object.keys(yearlyData).sort();
                 let accOp = 0, accDev = 0;
                 const timelineBody = years.map(yr => {
-                     accOp += yearlyData[yr].op;
-                     accDev += yearlyData[yr].dev;
-                     return [yr, accOp + accDev, accOp, accDev];
+                      accOp += yearlyData[yr].op;
+                      accDev += yearlyData[yr].dev;
+                      return [yr, accOp + accDev, accOp, accDev];
                 });
 
                 doc.autoTable({
