@@ -57,7 +57,7 @@
     .nav-tab.active { background: #003399; color: white; border-color: #003399; }
     .dark .nav-tab.active { background: #3b82f6; border-color: #3b82f6; color: white; }
 
-    .sb-btn { width: 100%; text-align: left; padding: 12px 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; border-radius: 12px; color: #64748b; background: transparent; cursor: pointer; margin-bottom: 4px; }
+    .sb-btn { width: 100%; text-align: left; padding: 12px 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; border-radius: 12px; color: #64748b; background: transparent; cursor: margin-bottom: 4px; }
     .dark .sb-btn { color: #94a3b8; }
     .sb-btn:hover { background: rgba(241, 245, 249, 0.8); }
     .dark .sb-btn:hover { background: rgba(51, 65, 85, 0.5); }
@@ -261,6 +261,9 @@
         <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 flex flex-col md:flex-row gap-3 items-center sticky top-0 z-20 rounded-t-2xl backdrop-blur-sm">
           <h3 class="font-black text-sm flex items-center gap-2"><i class="fa-solid fa-list text-slate-400"></i> Master List</h3>
           <div class="flex flex-col md:flex-row gap-2 ml-auto w-full md:w-auto">
+            <select id="filterEReadiness" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-white/80 dark:bg-slate-800/80 outline-none w-full md:w-36 focus:ring-1 ring-blue-500">
+              <option value="All">All e-Readiness</option><option value="Digitally ready">Digitally Ready</option><option value="Not digitally ready">Not Digitally Ready</option>
+            </select>
             <select id="filterStatus" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-white/80 dark:bg-slate-800/80 outline-none w-full md:w-32 focus:ring-1 ring-blue-500">
               <option value="All">All Status</option><option value="Operational">Operational</option><option value="Developmental">Developmental</option><option value="With LOI">With LOI</option><option value="No LOI">No LOI</option>
             </select>
@@ -275,7 +278,8 @@
                 <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Province')">Province <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
                 <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Municipality')">Municipality <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
                 <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Status')">Status <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
-                <th class="px-6 py-4">Op. Date</th>
+                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('EReadiness')">e-Readiness <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th class="px-6 py-4">Op / Train Date</th>
                 <th class="px-6 py-4">Remarks</th>
                 <th class="px-6 py-4 text-right">Actions</th>
               </tr>
@@ -506,6 +510,13 @@
             { label: "Go Live Checklist Link", keys: ["Go Live Checklist Link"], type: "text" },
             { label: "Operational Date", keys: ["Operational Date", "Go Live Date", "Op Date"], type: "text" }
         ],
+        "VERSION AND ADDITIONAL INFO": [
+            { label: "V1 Operational", keys: ["V1 Operational"], type: "select", options: "BOOLEAN" },
+            { label: "V2 Operational", keys: ["V2 Operational"], type: "select", options: "BOOLEAN" },
+            { label: "V2 Developmental", keys: ["V2 Developmental", "V2 Developmen tal", "V2_Developmental"], type: "select", options: "BOOLEAN" },
+            { label: "Personnel Incharge", keys: ["Personnel Incharge"], type: "text" },
+            { label: "MOVs Drive", keys: ["MOVs Drive", "MOVs", "Means of Verification"], type: "text" }
+        ],
         "OVERALL": [
             { label: "Overall Remarks", keys: ["Overall Remarks", "Remarks"], type: "text" },
         ]
@@ -529,8 +540,46 @@
 
     async function checkVersion() { try { const res = await fetch(`${API_URL}?action=checkVersion`); const json = await res.json(); if (json.version && json.version !== CURRENT_VERSION) { document.getElementById('remoteVersionDisplay').innerText = `New: V${json.version}`; document.getElementById('forceUpdateModal').classList.remove('hidden'); } } catch(e) {} }
     async function initData() { showLoading(); const p = fetchLiveData(); const t = new Promise((r)=>setTimeout(()=>r('timeout'), 10000)); const res = await Promise.race([p, t]); if (res === 'timeout') { hideLoading(); alert("Timeout"); toggleSettings(); } else { await fetchHistoryList(); hideLoading(); } }
-    async function fetchLiveData() { try { const res = await fetch(`${API_URL}?action=getLive`); LIVE_DB = normalizeData(await res.json()); if (document.getElementById('compareBanner').classList.contains('hidden') && !snapshotMode) { if (activeFilter !== 'All') CURRENT_VIEW_DB = LIVE_DB.filter(x => x.Province === activeFilter); else CURRENT_VIEW_DB = LIVE_DB; renderDashboard(); if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { if(!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); } document.getElementById('statusIndicator').classList.remove('hidden'); document.getElementById('statusText').innerText = 'Live'; } return 'success'; } catch (e) { return 'error'; } }
-    function normalizeData(rawData) { return rawData.map(row => { const keys = Object.keys(row); const cleanKey = (str) => String(str).toLowerCase().replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim(); const find = (ks) => { const k = keys.find(x => ks.some(key => cleanKey(x) === cleanKey(key))); return k ? row[k] : ""; }; return { ID: row['_uid'] || find(['id', 'new geocode']), Province: find(['province']), Municipality: find(['name', 'municipality', 'lgu full name']), Status: find(['overall status', 'status']), Remarks: find(['overall remarks', 'remarks']), OpDate: find(['operational date', 'go live date', 'op date', 'bg', 'operational_date']), Version: find(['elgu version', 'version']), Lat: row[keys[8]] || find(['latitude', 'lat']), Lng: row[keys[9]] || find(['longitude', 'lng']), _raw: row }; }).filter(x => x.Municipality); }
+    
+    async function fetchLiveData() { 
+        try { 
+            const res = await fetch(`${API_URL}?action=getLive`); 
+            LIVE_DB = normalizeData(await res.json()); 
+            if (document.getElementById('compareBanner').classList.contains('hidden') && !snapshotMode) { 
+                if (activeFilter !== 'All') CURRENT_VIEW_DB = LIVE_DB.filter(x => x.Province === activeFilter); 
+                else CURRENT_VIEW_DB = LIVE_DB; 
+                renderDashboard(); 
+                if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { 
+                    if(!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); 
+                } 
+                document.getElementById('statusIndicator').classList.remove('hidden'); 
+                document.getElementById('statusText').innerText = 'Live'; 
+            } 
+            return 'success'; 
+        } catch (e) { return 'error'; } 
+    }
+
+    function normalizeData(rawData) { 
+        return rawData.map(row => { 
+            const keys = Object.keys(row); 
+            const cleanKey = (str) => String(str).toLowerCase().replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim(); 
+            const find = (ks) => { const k = keys.find(x => ks.some(key => cleanKey(x) === cleanKey(key))); return k ? row[k] : ""; }; 
+            return { 
+                ID: row['_uid'] || find(['id', 'new geocode']), 
+                Province: find(['province']), 
+                Municipality: find(['name', 'municipality', 'lgu full name']), 
+                Status: find(['overall status', 'status']), 
+                Remarks: find(['overall remarks', 'remarks']), 
+                OpDate: find(['operational date', 'go live date', 'op date', 'bg', 'operational_date']), 
+                TrainDate: find(['training start date', 'admin training date']), 
+                EReadiness: find(['ereadiness status', 'e-readiness result', 'e-readiness']),
+                Version: find(['elgu version', 'version']), 
+                Lat: row[keys[8]] || find(['latitude', 'lat']), 
+                Lng: row[keys[9]] || find(['longitude', 'lng']), 
+                _raw: row 
+            }; 
+        }).filter(x => x.Municipality); 
+    }
 
     function renderDashboard() { renderSidebar(); updateStats(); renderCharts(); populateYearFilter(); resetPg(); applyFilters(); }
     
@@ -552,18 +601,54 @@
     }
     
     function getVersionStats(data, status) {
+        // 1. Calculate v1ToV2 GLOBALLY so Operational LGUs still count towards this metric
+        let v1ToV2 = 0;
+        data.forEach(d => {
+            const v1Op = String(d._raw['V1 Operational'] || '').toUpperCase() === 'TRUE';
+            const v2Dev = String(d._raw['V2 Developmental'] || d._raw['V2 Developmen tal'] || '').toUpperCase() === 'TRUE';
+            if (v1Op && v2Dev) {
+                v1ToV2++;
+            }
+        });
+
+        // 2. Filter data for the remaining specific status metrics
         let filtered = data;
         if (status) {
            filtered = data.filter(d => (d.Status||'').toLowerCase().includes(status.toLowerCase()));
         }
+        
         let v1 = 0, v2 = 0, both = 0;
+        
+        const isOpCheck = status && status.toLowerCase() === 'operational';
+        const isDevCheck = status && status.toLowerCase() === 'developmental';
+
         filtered.forEach(d => {
+            let isV1 = false, isV2 = false;
+
+            const v1Op = String(d._raw['V1 Operational'] || '').toUpperCase() === 'TRUE';
+            const v2Op = String(d._raw['V2 Operational'] || '').toUpperCase() === 'TRUE';
+            const v2Dev = String(d._raw['V2 Developmental'] || d._raw['V2 Developmen tal'] || '').toUpperCase() === 'TRUE';
+
+            if (isOpCheck) {
+                isV1 = v1Op;
+                isV2 = v2Op;
+            } else if (isDevCheck) {
+                isV2 = v2Dev;
+            } else {
+                isV1 = v1Op;
+                isV2 = v2Op || v2Dev;
+            }
+
             const v = (d.Version || '').toLowerCase();
-            if(v.includes('both')) both++;
-            else if(v.includes('v1')) v1++;
-            else if(v.includes('v2')) v2++;
+
+            if (isV1 && isV2) { both++; }
+            else if (isV1) { v1++; }
+            else if (isV2) { v2++; }
+            else if (v.includes('both')) { both++; }
+            else if (v.includes('v1')) { v1++; }
+            else if (v.includes('v2')) { v2++; }
         });
-        return { v1, v2, both };
+        return { v1, v2, both, v1ToV2 };
     }
 
     function updateStats() { 
@@ -579,18 +664,19 @@
         document.getElementById('kpi-op-container').innerHTML = `
             <h2 class="text-2xl font-black text-slate-800 dark:text-white">${s.op}</h2>
             ${s.op > 0 ? `<div class="flex flex-col gap-1 items-end ml-2">
-                <span class="stat-pill text-green-700 dark:text-green-300 border-l-2 border-green-500 pl-1">Version 1: ${opV.v1}</span>
-                <span class="stat-pill text-blue-700 dark:text-blue-300 border-l-2 border-blue-500 pl-1">Version 2: ${opV.v2}</span>
+                ${opV.v1 > 0 ? `<span class="stat-pill text-green-700 dark:text-green-300 border-l-2 border-green-500 pl-1">Version 1: ${opV.v1}</span>` : ''}
+                ${opV.v2 > 0 ? `<span class="stat-pill text-blue-700 dark:text-blue-300 border-l-2 border-blue-500 pl-1">Version 2: ${opV.v2}</span>` : ''}
                 ${opV.both > 0 ? `<span class="stat-pill text-indigo-700 dark:text-indigo-300 border-l-2 border-indigo-500 pl-1">Both: ${opV.both}</span>` : ''}
             </div>` : ''}
         `;
 
         document.getElementById('kpi-dev-container').innerHTML = `
             <h2 class="text-2xl font-black text-slate-800 dark:text-white">${s.dev}</h2>
-             ${s.dev > 0 ? `<div class="flex flex-col gap-1 items-end ml-2">
-                <span class="stat-pill text-green-700 dark:text-green-300 border-l-2 border-green-500 pl-1">Version 1: ${devV.v1}</span>
-                <span class="stat-pill text-blue-700 dark:text-blue-300 border-l-2 border-blue-500 pl-1">Version 2: ${devV.v2}</span>
+             ${(s.dev > 0 || devV.v1ToV2 > 0) ? `<div class="flex flex-col gap-1 items-end ml-2">
+                ${devV.v1 > 0 ? `<span class="stat-pill text-green-700 dark:text-green-300 border-l-2 border-green-500 pl-1">Version 1: ${devV.v1}</span>` : ''}
+                ${devV.v2 > 0 ? `<span class="stat-pill text-blue-700 dark:text-blue-300 border-l-2 border-blue-500 pl-1">Version 2: ${devV.v2}</span>` : ''}
                 ${devV.both > 0 ? `<span class="stat-pill text-indigo-700 dark:text-indigo-300 border-l-2 border-indigo-500 pl-1">Both: ${devV.both}</span>` : ''}
+                ${devV.v1ToV2 > 0 ? `<span class="stat-pill text-purple-700 dark:text-purple-300 border-l-2 border-purple-500 pl-1">V1 to V2: ${devV.v1ToV2}</span>` : ''}
             </div>` : ''}
         `;
         return s; 
@@ -609,9 +695,24 @@
       chartInstPie = new Chart(document.getElementById('chartPie'), cfgPie);
       window.__chartConfigs.pie = { title: 'Status Overview', type: 'pie', config: cfgPie, useStandardTooltip: true, stats: s };
 
-      const dateRows = CURRENT_VIEW_DB.filter(d => /\d{4}/.test(String(d.OpDate||"")));
       const yearlyData = {};
-      dateRows.forEach(d => { const y = (String(d.OpDate||"").match(/\d{4}/)||[])[0]; if(y) { if(!yearlyData[y]) yearlyData[y] = { op: 0, dev: 0, loi: 0, no: 0 }; const st = (d.Status || '').toLowerCase(); if(st.includes('operational')) yearlyData[y].op++; else if(st.includes('developmental')) yearlyData[y].dev++; else if(st.includes('with loi') || st.includes('loi')) yearlyData[y].loi++; else yearlyData[y].no++; } });
+      CURRENT_VIEW_DB.forEach(d => { 
+          const st = (d.Status || '').toLowerCase();
+          
+          // Use Training Date if Developmental, otherwise Operational Date
+          const targetDate = (st.includes('developmental') && d.TrainDate) ? d.TrainDate : d.OpDate;
+          
+          const yMatch = String(targetDate || "").match(/\d{4}/);
+          if (yMatch) { 
+              const y = yMatch[0];
+              if(!yearlyData[y]) yearlyData[y] = { op: 0, dev: 0, loi: 0, no: 0 }; 
+              if(st.includes('operational')) yearlyData[y].op++; 
+              else if(st.includes('developmental')) yearlyData[y].dev++; 
+              else if(st.includes('with loi') || st.includes('loi')) yearlyData[y].loi++; 
+              else yearlyData[y].no++; 
+          } 
+      });
+
       const yLabels = Object.keys(yearlyData).sort();
       let accOp = 0, accDev = 0;
       const dOp = [], dDev = [], dOverall = [];
@@ -651,11 +752,12 @@
           ];
           items.forEach(i => {
               let subInfo = '';
-              if(i.ver && (i.ver.v1 > 0 || i.ver.v2 > 0 || i.ver.both > 0)) {
+              if(i.ver && (i.ver.v1 > 0 || i.ver.v2 > 0 || i.ver.both > 0 || (i.l !== 'Operational' && i.ver.v1ToV2 > 0))) {
                   subInfo = `<div class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-2 text-xs font-bold text-slate-500">
-                      <span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Version 1: <strong>${i.ver.v1}</strong></span>
-                      <span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Version 2: <strong>${i.ver.v2}</strong></span>
+                      ${i.ver.v1 > 0 ? `<span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Version 1: <strong>${i.ver.v1}</strong></span>` : ''}
+                      ${i.ver.v2 > 0 ? `<span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Version 2: <strong>${i.ver.v2}</strong></span>` : ''}
                       ${i.ver.both > 0 ? `<span class="px-2 py-1 bg-white dark:bg-slate-700 rounded border">Both: <strong>${i.ver.both}</strong></span>` : ''}
+                      ${i.l !== 'Operational' && i.ver.v1ToV2 > 0 ? `<span class="px-2 py-1 bg-white dark:bg-slate-700 text-purple-600 rounded border">V1 to V2: <strong>${i.ver.v1ToV2}</strong></span>` : ''}
                   </div>`;
               }
               details.innerHTML += `<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm"><div class="flex justify-between items-center mb-1"><span class="text-sm font-black uppercase ${i.c}">${i.l}</span><span class="px-3 py-1 rounded text-xs font-bold ${i.bg} ${i.c}">${getPct(i.v)}%</span></div><div class="text-3xl font-black text-slate-800 dark:text-white mb-1">${i.v}</div>${subInfo}</div>`;
@@ -693,7 +795,11 @@
                     <div class="text-center bg-yellow-50 dark:bg-yellow-900/20 rounded py-1"><div class="text-[9px] text-yellow-500 font-bold">LOI</div><div class="text-xs font-black text-yellow-600">${x.loi}</div></div>
                     <div class="text-center bg-red-50 dark:bg-red-900/20 rounded py-1"><div class="text-[9px] text-red-400 font-bold">NONE</div><div class="text-xs font-black text-red-600">${x.no}</div></div>
                 </div>
-                ${x.op > 0 ? `<div class="flex justify-end gap-3 text-xs font-bold text-slate-400 mt-1 border-t border-dashed border-slate-100 pt-2"><span class="text-slate-500">Version 1: <b class="text-slate-800 dark:text-white">${vStats.v1}</b></span><span class="text-slate-300">|</span><span class="text-slate-500">Version 2: <b class="text-slate-800 dark:text-white">${vStats.v2}</b></span><span class="text-slate-300">|</span><span class="text-slate-500">Both: <b class="text-slate-800 dark:text-white">${vStats.both}</b></span></div>` : ''}
+                ${x.op > 0 ? `<div class="flex justify-end gap-3 text-xs font-bold text-slate-400 mt-1 border-t border-dashed border-slate-100 pt-2">
+                    ${vStats.v1 > 0 ? `<span class="text-slate-500">Version 1: <b class="text-slate-800 dark:text-white">${vStats.v1}</b></span><span class="text-slate-300">|</span>` : ''}
+                    ${vStats.v2 > 0 ? `<span class="text-slate-500">Version 2: <b class="text-slate-800 dark:text-white">${vStats.v2}</b></span><span class="text-slate-300">|</span>` : ''}
+                    ${vStats.both > 0 ? `<span class="text-slate-500">Both: <b class="text-slate-800 dark:text-white">${vStats.both}</b></span>` : ''}
+                </div>` : ''}
             </div>`}).join('')}</div>`;
       }
 
@@ -741,8 +847,68 @@
     }
 
     function resetPg() { curPage = 1; }
-    function applyFilters() { const txt = document.getElementById('searchBox').value.toLowerCase(); const status = document.getElementById('filterStatus').value; const year = document.getElementById('filterYear').value; let data = CURRENT_VIEW_DB; if (txt) data = data.filter(d => JSON.stringify(d).toLowerCase().includes(txt)); if (status !== 'All') data = data.filter(d => (d.Status || "").includes(status)); if (year !== 'All') data = data.filter(d => (d.OpDate || "").includes(year)); data.sort((a, b) => { let va = String(a[sortCol] || ''), vb = String(b[sortCol] || ''); return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va); }); const total = data.length; const maxPage = Math.max(1, Math.ceil(total / pgSize)); if (curPage > maxPage) curPage = maxPage; const start = (curPage - 1) * pgSize; const end = Math.min(start + pgSize, total); document.getElementById('pgStart').innerText = total ? start + 1 : 0; document.getElementById('pgEnd').innerText = end; document.getElementById('pgTotal').innerText = total; renderTable(data.slice(start, end)); }
-    function renderTable(data) { const tbody = document.getElementById('tableBody'); tbody.innerHTML = ''; data.forEach((row) => { const c = statusColor(row.Status); const gIdx = LIVE_DB.findIndex(x => x.ID === row.ID); tbody.innerHTML += `<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition border-b border-slate-50 dark:border-slate-800/50"><td class="px-6 py-4 font-black text-slate-400 text-[10px] uppercase">${row.Province || '-'}</td><td class="px-6 py-4 font-bold text-slate-800 dark:text-slate-200 text-xs">${row.Municipality}</td><td class="px-6 py-4"><span class="badge" style="background:${c}20; color:${c}">${row.Status || '-'}</span></td><td class="px-6 py-4 text-xs font-mono text-slate-500">${row.OpDate || '-'}</td><td class="px-6 py-4 text-[10px] text-slate-400 truncate max-w-[150px]">${row.Remarks || '-'}</td><td class="px-6 py-4 text-right flex justify-end gap-2"><button onclick="openViewModal(${gIdx})" class="text-[10px] font-black text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:text-dict-blue uppercase tracking-tighter transition">View</button><button onclick="openEditModal(${gIdx})" class="text-[10px] font-black text-white bg-dict-blue px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-700 uppercase tracking-tighter transition">Edit</button></td></tr>`; }); }
+    
+    function applyFilters() { 
+        const txt = document.getElementById('searchBox').value.toLowerCase(); 
+        const status = document.getElementById('filterStatus').value; 
+        const year = document.getElementById('filterYear').value; 
+        const eread = document.getElementById('filterEReadiness').value;
+        
+        let data = CURRENT_VIEW_DB; 
+        
+        if (txt) data = data.filter(d => JSON.stringify(d).toLowerCase().includes(txt)); 
+        if (status !== 'All') data = data.filter(d => (d.Status || "").includes(status)); 
+        
+        if (eread !== 'All') {
+            const isNot = eread.toLowerCase().includes('not');
+            data = data.filter(d => {
+                const val = (d.EReadiness || "").toLowerCase();
+                return isNot ? val.includes('not') : (val.includes('ready') && !val.includes('not'));
+            });
+        }
+
+        if (year !== 'All') {
+            data = data.filter(d => {
+                const st = (d.Status || "").toLowerCase();
+                const targetDate = (st.includes('developmental') && d.TrainDate) ? d.TrainDate : d.OpDate;
+                return (targetDate || "").includes(year);
+            });
+        }
+        
+        data.sort((a, b) => { let va = String(a[sortCol] || ''), vb = String(b[sortCol] || ''); return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va); }); 
+        
+        const total = data.length; 
+        const maxPage = Math.max(1, Math.ceil(total / pgSize)); 
+        if (curPage > maxPage) curPage = maxPage; 
+        
+        const start = (curPage - 1) * pgSize; 
+        const end = Math.min(start + pgSize, total); 
+        
+        document.getElementById('pgStart').innerText = total ? start + 1 : 0; 
+        document.getElementById('pgEnd').innerText = end; 
+        document.getElementById('pgTotal').innerText = total; 
+        renderTable(data.slice(start, end)); 
+    }
+    
+    function renderTable(data) { 
+        const tbody = document.getElementById('tableBody'); 
+        tbody.innerHTML = ''; 
+        
+        data.forEach((row) => { 
+            const c = statusColor(row.Status); 
+            const gIdx = LIVE_DB.findIndex(x => x.ID === row.ID); 
+            
+            const st = (row.Status || '').toLowerCase();
+            const displayDate = (st.includes('developmental') && row.TrainDate) ? row.TrainDate : (row.OpDate || '-');
+
+            const eReadVal = (row.EReadiness || '').toLowerCase();
+            const eReadC = eReadVal.includes('not') ? '#ef4444' : (eReadVal.includes('ready') ? '#22c55e' : '#94a3b8');
+            const eReadHTML = row.EReadiness ? `<span class="badge" style="background:${eReadC}20; color:${eReadC}">${row.EReadiness}</span>` : '-';
+
+            tbody.innerHTML += `<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition border-b border-slate-50 dark:border-slate-800/50"><td class="px-6 py-4 font-black text-slate-400 text-[10px] uppercase">${row.Province || '-'}</td><td class="px-6 py-4 font-bold text-slate-800 dark:text-slate-200 text-xs">${row.Municipality}</td><td class="px-6 py-4"><span class="badge" style="background:${c}20; color:${c}">${row.Status || '-'}</span></td><td class="px-6 py-4">${eReadHTML}</td><td class="px-6 py-4 text-xs font-mono text-slate-500">${displayDate}</td><td class="px-6 py-4 text-[10px] text-slate-400 truncate max-w-[150px]">${row.Remarks || '-'}</td><td class="px-6 py-4 text-right flex justify-end gap-2"><button onclick="openViewModal(${gIdx})" class="text-[10px] font-black text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:text-dict-blue uppercase tracking-tighter transition">View</button><button onclick="openEditModal(${gIdx})" class="text-[10px] font-black text-white bg-dict-blue px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-700 uppercase tracking-tighter transition">Edit</button></td></tr>`; 
+        }); 
+    }
+
     function initMap() { if (document.getElementById('view-map').classList.contains('hidden')) return; if (map) map.remove(); map = L.map('map').setView([17.2, 121.0], 8); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map); renderMapMarkers(CURRENT_VIEW_DB); }
     function statusColor(status) { const s = (status || '').toLowerCase(); if (s.includes('operational')) return '#22c55e'; if (s.includes('developmental')) return '#3b82f6'; if (s.includes('no loi')) return '#ef4444'; if (s.includes('with loi') || s.includes('loi')) return '#f59e0b'; return '#ef4444'; }
     function renderMapMarkers(data) { if (!map) return; markers.forEach(m => map.removeLayer(m)); markers = []; data.forEach(d => { const lat = parseFloat(d.Lat); const lng = parseFloat(d.Lng); if (!isFinite(lat) || !isFinite(lng)) return; const c = statusColor(d.Status); const popup = `<div style="min-width:180px"><div style="font-weight:900">${d.Municipality}</div><div style="font-size:12px; opacity:.85">${d.Province || '-'}</div><div style="margin-top:6px; font-size:12px"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:${c};margin-right:6px"></span><b>${d.Status || '-'}</b></div><div style="margin-top:4px; font-size:10px; color:#666; font-style:italic; border-top:1px solid #eee; padding-top:4px">${d.Remarks || 'No remarks'}</div></div>`; markers.push(L.circleMarker([lat, lng], { radius: 6, fillColor: c, color: '#fff', weight: 1, fillOpacity: 0.9 }).bindPopup(popup).addTo(map)); }); }
@@ -798,11 +964,109 @@
       c.scrollTop = c.scrollHeight;
     }
 
-    function populateYearFilter() { const years = new Set(); CURRENT_VIEW_DB.forEach(d => { if (d.OpDate) { const y = d.OpDate.match(/\d{4}/); if (y) years.add(y[0]); } }); document.getElementById('filterYear').innerHTML = '<option value="All">All Years</option>' + [...years].sort().map(y => `<option value="${y}">${y}</option>`).join(''); }
+    function populateYearFilter() { 
+        const years = new Set(); 
+        CURRENT_VIEW_DB.forEach(d => { 
+            const st = (d.Status || '').toLowerCase();
+            const targetDate = (st.includes('developmental') && d.TrainDate) ? d.TrainDate : d.OpDate;
 
-    // ... (rest of functions same) ...
+            if (targetDate) { 
+                const y = targetDate.match(/\d{4}/); 
+                if (y) years.add(y[0]); 
+            } 
+        }); 
+        document.getElementById('filterYear').innerHTML = '<option value="All">All Years</option>' + [...years].sort().map(y => `<option value="${y}">${y}</option>`).join(''); 
+    }
+
     function findValueInRow(raw, keysArray) { if (!keysArray || !keysArray.length) return { key: null, value: "" }; const rawKeys = Object.keys(raw); const cleanKey = (str) => String(str).toLowerCase().replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim(); for (const potentialKey of keysArray) { const foundKey = rawKeys.find(k => cleanKey(k) === cleanKey(potentialKey)); if (foundKey) return { key: foundKey, value: raw[foundKey] }; } return { key: null, value: "" }; }
-    function openViewModal(idx) { const d = LIVE_DB[idx]; if (!d) return; const viewSections = { "LGU Profile": ["PROVINCE", "REGION", "LEVEL", "INCOME CLASS", "Latitude", "Longtitude", "eLGU Version", "Date"], "eLGU Onboarding Documents": ["Letter of Intent", "LOI Date", "E-READINESS SURVEY", "eReadiness Status", "SB Resolution", "SB Date", "Memorandum of Understanding", "MOU Status"], "eGovPay Onboarding": ["Sign Up Details", "eGovPay UAT Date", "eGovPay Sign Off", "eGovPay Sign Off Date", "eGovPay Status", "eGovPay Remarks"], "Admin Training and System Setup": ["Consent Form", "Training Start Date", "Training End Date", "Setup Checklist", "SET UP Date"], "User Acceptance and Testing": ["Issue Logs", "Acceptance Checklist", "UAT Sign Off", "UAT Date", "UAT Status", "UAT Remarks"], "Go Live Preparations": ["Go Live Checklist", "OPERATIONAL DATE"] }; const attachmentMap = { "LGU Profile": ["FOLDER LINK"], "eLGU Onboarding Documents": ["LOI LINK", "SB LINK", "MOU LINK", "E-READINESS SURVERY LINK", "E-READINESS SURVEY LINK"], "eGovPay Onboarding": ["EGOVPAY CBD LINK", "EGOVPAY SIGN OFF LINK"], "Admin Training and System Setup": ["CONSENT FORM Link", "SETUP CHECKLIST Link"], "User Acceptance and Testing": ["ISSUE LOGS Link", "ACCEPTANCE CHECKLIST Link", "UAT SIGN OFF Link"], "Go Live Preparations": ["Go Live Checklist Link"] }; const versionObj = findValueInRow(d._raw, ["eLGU Version", "Version"]); const version = versionObj.value || ''; document.getElementById('viewTitle').innerText = d.Municipality; document.getElementById('viewProvince').innerHTML = `<div class="mb-2 text-sm font-black uppercase tracking-widest text-blue-200">${d.Province || '-'}</div><div class="flex items-center gap-2"><div class="inline-block px-3 py-1 rounded-md text-[10px] font-bold bg-white/10 text-white border border-white/20 shadow-sm backdrop-blur-sm">${d.Status || 'Unknown Status'}</div>${version ? `<div class="inline-block px-3 py-1 rounded-md text-[10px] font-bold bg-blue-400/40 text-white border border-white/20 shadow-sm backdrop-blur-sm">${version}</div>` : ''}</div>`; const cont = document.getElementById('sectionedContent'); cont.innerHTML = ""; const remKey = Object.keys(d._raw).find(x => x.toLowerCase().includes('overall remarks')); const remVal = remKey ? d._raw[remKey] : ''; if(remVal && remVal !== '-') { cont.innerHTML += `<div class="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-4 rounded-xl"><div class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2"><i class="fa-regular fa-comment-dots mr-2"></i>Overall Remarks</div><div class="text-sm font-medium text-slate-700 dark:text-slate-200 leading-relaxed">${remVal}</div></div>`; } for (const [sec, fields] of Object.entries(viewSections)) { let html = `<div class="section-header">${sec}</div><div class="grid grid-cols-2 gap-x-6 gap-y-4 mb-2">`; fields.forEach(f => { let val = '-'; let configEntry = null; for (const section of Object.values(EDIT_FORM_CONFIG)) { const entry = section.find(item => item.label === f || item.keys.includes(f)); if(entry) { configEntry = entry; break; } } if(configEntry) { val = findValueInRow(d._raw, configEntry.keys).value || '-'; } else { const k = Object.keys(d._raw).find(rk => rk.toLowerCase().includes(f.toLowerCase()) || f.toLowerCase().includes(rk.toLowerCase())); val = k ? d._raw[k] : '-'; } const labelClass = "text-[10px] font-bold text-slate-400 block uppercase mb-1"; html += `<div><span class="${labelClass}">${f}</span><span class="text-xs font-semibold dark:text-white break-words">${val}</span></div>`; }); html += `</div>`; const targetLinks = attachmentMap[sec] || []; const foundLinks = []; targetLinks.forEach(linkKey => { const foundKey = Object.keys(d._raw).find(k => k.toLowerCase().includes(linkKey.toLowerCase())); if(foundKey) { const url = d._raw[foundKey]; const isValid = url && String(url).toLowerCase().startsWith('http'); foundLinks.push({ label: linkKey, url: url, valid: isValid }); } }); if (foundLinks.length > 0) { html += `<div class="mb-5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800"><div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Attachments</div><div class="grid grid-cols-2 md:grid-cols-3 gap-2">`; foundLinks.forEach(link => { if (link.valid) { html += `<a href="${link.url}" target="_blank" class="flex flex-col items-center justify-center p-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg hover:border-dict-blue transition group"><i class="fa-solid fa-paperclip text-slate-300 group-hover:text-dict-blue mb-1"></i><span class="text-[9px] font-bold uppercase text-center text-slate-500 group-hover:text-dict-blue truncate w-full">${link.label}</span></a>`; } else { html += `<div class="flex flex-col items-center justify-center p-2 bg-red-50/50 dark:bg-red-900/10 border border-red-300 dark:border-red-800/50 rounded-lg cursor-not-allowed opacity-75"><i class="fa-solid fa-file-circle-xmark text-red-400 mb-1"></i><span class="text-[9px] font-bold uppercase text-center text-red-400 truncate w-full">${link.label}</span><span class="text-[8px] font-bold text-red-300 uppercase tracking-wider mt-0.5">No File</span></div>`; } }); html += `</div></div>`; } else { html += `<div class="mb-5"></div>`; } cont.innerHTML += html; } openModal('modalDetails'); }
+    
+    function openViewModal(idx) { 
+        const d = LIVE_DB[idx]; 
+        if (!d) return; 
+        
+        // MOVs Drive is now assigned to its own dedicated section to make it stand out
+        const viewSections = { 
+            "LGU Profile": ["PROVINCE", "REGION", "LEVEL", "INCOME CLASS", "Latitude", "Longtitude", "eLGU Version", "Date"], 
+            "eLGU Onboarding Documents": ["Letter of Intent", "LOI Date", "E-READINESS SURVEY", "eReadiness Status", "SB Resolution", "SB Date", "Memorandum of Understanding", "MOU Status"], 
+            "eGovPay Onboarding": ["Sign Up Details", "eGovPay UAT Date", "eGovPay Sign Off", "eGovPay Sign Off Date", "eGovPay Status", "eGovPay Remarks"], 
+            "Admin Training and System Setup": ["Consent Form", "Training Start Date", "Training End Date", "Setup Checklist", "SET UP Date"], 
+            "User Acceptance and Testing": ["Issue Logs", "Acceptance Checklist", "UAT Sign Off", "UAT Date", "UAT Status", "UAT Remarks"], 
+            "Go Live Preparations": ["Go Live Checklist", "OPERATIONAL DATE"],
+            "Version Data & Personnel": ["V1 Operational", "V2 Operational", "V2 Developmental", "Personnel Incharge"],
+            "Means of Verification (MOVs)": [] // Empty array prevents text rendering, routing it only to the attachment block
+        }; 
+        
+        // This ensures the button attachment is triggered for the new MOVs section
+        const attachmentMap = { 
+            "LGU Profile": ["FOLDER LINK"], 
+            "eLGU Onboarding Documents": ["LOI LINK", "SB LINK", "MOU LINK", "E-READINESS SURVERY LINK", "E-READINESS SURVEY LINK"], 
+            "eGovPay Onboarding": ["EGOVPAY CBD LINK", "EGOVPAY SIGN OFF LINK"], 
+            "Admin Training and System Setup": ["CONSENT FORM Link", "SETUP CHECKLIST Link"], 
+            "User Acceptance and Testing": ["ISSUE LOGS Link", "ACCEPTANCE CHECKLIST Link", "UAT SIGN OFF Link"], 
+            "Go Live Preparations": ["Go Live Checklist Link"],
+            "Version Data & Personnel": [],
+            "Means of Verification (MOVs)": ["MOVs Drive"]
+        }; 
+        
+        const versionObj = findValueInRow(d._raw, ["eLGU Version", "Version"]); 
+        const version = versionObj.value || ''; 
+        document.getElementById('viewTitle').innerText = d.Municipality; 
+        document.getElementById('viewProvince').innerHTML = `<div class="mb-2 text-sm font-black uppercase tracking-widest text-blue-200">${d.Province || '-'}</div><div class="flex items-center gap-2"><div class="inline-block px-3 py-1 rounded-md text-[10px] font-bold bg-white/10 text-white border border-white/20 shadow-sm backdrop-blur-sm">${d.Status || 'Unknown Status'}</div>${version ? `<div class="inline-block px-3 py-1 rounded-md text-[10px] font-bold bg-blue-400/40 text-white border border-white/20 shadow-sm backdrop-blur-sm">${version}</div>` : ''}</div>`; 
+        const cont = document.getElementById('sectionedContent'); 
+        cont.innerHTML = ""; 
+        const remKey = Object.keys(d._raw).find(x => x.toLowerCase().includes('overall remarks')); 
+        const remVal = remKey ? d._raw[remKey] : ''; 
+        if(remVal && remVal !== '-') { cont.innerHTML += `<div class="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-4 rounded-xl"><div class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2"><i class="fa-regular fa-comment-dots mr-2"></i>Overall Remarks</div><div class="text-sm font-medium text-slate-700 dark:text-slate-200 leading-relaxed">${remVal}</div></div>`; } 
+        
+        for (const [sec, fields] of Object.entries(viewSections)) { 
+            let html = `<div class="section-header">${sec}</div><div class="grid grid-cols-2 gap-x-6 gap-y-4 mb-2">`; 
+            fields.forEach(f => { 
+                let val = '-'; 
+                let configEntry = null; 
+                for (const section of Object.values(EDIT_FORM_CONFIG)) { 
+                    const entry = section.find(item => item.label === f || item.keys.includes(f)); 
+                    if(entry) { configEntry = entry; break; } 
+                } 
+                if(configEntry) { 
+                    val = findValueInRow(d._raw, configEntry.keys).value || '-'; 
+                } else { 
+                    const k = Object.keys(d._raw).find(rk => rk.toLowerCase().includes(f.toLowerCase()) || f.toLowerCase().includes(rk.toLowerCase())); 
+                    val = k ? d._raw[k] : '-'; 
+                } 
+                const labelClass = "text-[10px] font-bold text-slate-400 block uppercase mb-1"; 
+                html += `<div><span class="${labelClass}">${f}</span><span class="text-xs font-semibold dark:text-white break-words">${val}</span></div>`; 
+            }); 
+            html += `</div>`; 
+            
+            const targetLinks = attachmentMap[sec] || []; 
+            const foundLinks = []; 
+            targetLinks.forEach(linkKey => { 
+                const foundKey = Object.keys(d._raw).find(k => k.toLowerCase().includes(linkKey.toLowerCase()) || (linkKey === "MOVs Drive" && k.toLowerCase().includes("mov"))); 
+                let url = ''; 
+                if(foundKey) { 
+                    url = d._raw[foundKey]; 
+                } 
+                const isValid = url && String(url).toLowerCase().startsWith('http'); 
+                foundLinks.push({ label: linkKey, url: url, valid: isValid }); 
+            }); 
+            if (foundLinks.length > 0) { 
+                html += `<div class="mb-5 mt-2 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800"><div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Attachments</div><div class="grid grid-cols-2 md:grid-cols-3 gap-2">`; 
+                foundLinks.forEach(link => { 
+                    if (link.valid) { 
+                        html += `<a href="${link.url}" target="_blank" class="flex flex-col items-center justify-center p-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg hover:border-dict-blue transition group"><i class="fa-solid fa-paperclip text-slate-300 group-hover:text-dict-blue mb-1"></i><span class="text-[9px] font-bold uppercase text-center text-slate-500 group-hover:text-dict-blue truncate w-full">${link.label}</span></a>`; 
+                    } else { 
+                        html += `<div class="flex flex-col items-center justify-center p-2 bg-red-50/50 dark:bg-red-900/10 border border-red-300 dark:border-red-800/50 rounded-lg cursor-not-allowed opacity-75"><i class="fa-solid fa-file-circle-xmark text-red-400 mb-1"></i><span class="text-[9px] font-bold uppercase text-center text-red-400 truncate w-full">${link.label}</span><span class="text-[8px] font-bold text-red-300 uppercase tracking-wider mt-0.5">No File</span></div>`; 
+                    } 
+                }); 
+                html += `</div></div>`; 
+            } else { 
+                html += `<div class="mb-5"></div>`; 
+            } 
+            cont.innerHTML += html; 
+        } 
+        openModal('modalDetails'); 
+    }
+
     function openEditModal(idx) { const d = LIVE_DB[idx]; if (!d) return; const cont = document.getElementById('dynamicInputs'); cont.innerHTML = `<input type="hidden" id="editIdLock" value="${d.ID}">`; for (const [sectionName, fields] of Object.entries(EDIT_FORM_CONFIG)) { let sectionHtml = `<div class="font-black text-xs text-slate-800 dark:text-white mt-6 mb-3 pb-1 border-b-2 border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-800 z-10 pt-2">${sectionName}</div><div class="grid grid-cols-1 gap-3">`; fields.forEach(fieldConfig => { if (fieldConfig.type === "hidden") return; const { key: actualKey, value: actualValue } = findValueInRow(d._raw, fieldConfig.keys); const targetKey = actualKey || fieldConfig.keys[0]; const safeVal = String(actualValue || "").trim(); let inputHtml = ""; const isDate = fieldConfig.label.includes("Date") || fieldConfig.type === "date"; if (fieldConfig.type === "locked") { inputHtml = `<input type="text" data-key="${targetKey}" value="${safeVal}" readonly class="w-full text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed opacity-75">`; } else if (fieldConfig.type === "select") { const optionsKey = fieldConfig.options; const optionsList = DROPDOWN_OPTIONS[optionsKey] || []; const optionsHtml = optionsList.map(opt => `<option value="${opt}" ${safeVal.toUpperCase() === opt.toUpperCase() ? 'selected' : ''}>${opt}</option>`).join(''); inputHtml = `<select data-key="${targetKey}" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500">${optionsHtml}</select>`; } else if (isDate) { let dateVal = safeVal; const dateObj = new Date(safeVal); if (safeVal && safeVal.length > 5 && !isNaN(dateObj.getTime())) { try { const offset = dateObj.getTimezoneOffset() * 60000; const localISODate = new Date(dateObj.getTime() - offset).toISOString().split('T')[0]; dateVal = localISODate; } catch(e){} } inputHtml = `<input type="date" data-key="${targetKey}" value="${dateVal}" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500 text-slate-600">`; } else { inputHtml = `<input type="text" data-key="${targetKey}" value="${safeVal}" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500">`; } sectionHtml += `<div><label class="block text-[10px] font-black text-slate-500 uppercase mb-1">${fieldConfig.label}</label>${inputHtml}</div>`; }); sectionHtml += `</div>`; cont.innerHTML += sectionHtml; } openModal('modalEdit'); }
     function saveSettings() { localStorage.setItem('elgu_api_url', document.getElementById('apiUrl').value.trim()); location.reload(); }
     async function saveLGU() { const btn = document.getElementById('btnSaveLGU'); btn.innerText = 'SAVING...'; const updates = {}; const inputs = document.querySelectorAll('#dynamicInputs [data-key]'); inputs.forEach(i => { updates[i.getAttribute('data-key')] = i.value; }); const idInput = document.querySelector('#dynamicInputs input[type="hidden"]'); const id = idInput ? idInput.value : null; if(!id) { alert('Error: Record ID missing. Please reload.'); btn.innerText = 'Save Changes'; return; } const idx = LIVE_DB.findIndex(x => x.ID === id); if (idx !== -1) { Object.keys(updates).forEach(k => { LIVE_DB[idx]._raw[k] = updates[k]; }); const newNorm = normalizeData([LIVE_DB[idx]._raw])[0]; LIVE_DB[idx] = newNorm; } try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateLGU', id: id, updates: updates }) }); alert('Saved Successfully!'); } catch (e) { alert('Saved (Offline Simulation)'); } closeModal('modalEdit'); applyFilters(); updateStats(); renderCharts(); btn.innerText = 'Save Changes'; }
@@ -993,7 +1257,6 @@
     function changePg(dir) { curPage += dir; if (curPage < 1) curPage = 1; applyFilters(); }
     function toggleTheme() { document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); renderCharts(); if (compareState && document.getElementById('modalCompare').classList.contains('active')) renderCompareModal(); }
     function toggleSettings() { document.getElementById('settingsBar').classList.toggle('hidden'); }
-    function populateYearFilter() { const years = new Set(); CURRENT_VIEW_DB.forEach(d => { if (d.OpDate) { const y = d.OpDate.match(/\d{4}/); if (y) years.add(y[0]); } }); document.getElementById('filterYear').innerHTML = '<option value="All">All Years</option>' + [...years].sort().map(y => `<option value="${y}">${y}</option>`).join(''); }
 
     /* --- ADDED AI REPORT FEATURES --- */
     function triggerAiReport() {
@@ -1042,10 +1305,13 @@
         const fileName = `eLGU_Report_${activeFilter}_${new Date().toISOString().slice(0,10)}`;
 
         if (type === 'csv') {
-            const headers = ["ID", "Province", "Municipality", "Region", "Level", "Income Class", "Status", "Operational Date", "Remarks"];
+            const headers = ["ID", "Province", "Municipality", "Region", "Level", "Income Class", "Status", "e-Readiness", "Op / Train Date", "Remarks"];
             const csvRows = [headers.join(',')];
             CURRENT_VIEW_DB.forEach(row => {
-                const vals = [row.ID, row.Province, row.Municipality, row._raw['Region']||'', row._raw['Level']||'', row._raw['Income Class']||'', row.Status, row.OpDate, row.Remarks];
+                const st = (row.Status || '').toLowerCase();
+                const displayDate = (st.includes('developmental') && row.TrainDate) ? row.TrainDate : (row.OpDate || '');
+
+                const vals = [row.ID, row.Province, row.Municipality, row._raw['Region']||'', row._raw['Level']||'', row._raw['Income Class']||'', row.Status, row.EReadiness||'-', displayDate, row.Remarks];
                 csvRows.push(vals.map(v => `"${String(v||'').replace(/"/g, '""')}"`).join(','));
             });
             const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
@@ -1151,9 +1417,19 @@
                 y += 75;
 
                 // ** ADD TIMELINE DETAILS TABLE **
-                const dateRows = CURRENT_VIEW_DB.filter(d => /\d{4}/.test(String(d.OpDate||"")));
                 const yearlyData = {};
-                dateRows.forEach(d => { const yr = (String(d.OpDate||"").match(/\d{4}/)||[])[0]; if(yr) { if(!yearlyData[yr]) yearlyData[yr] = { op: 0, dev: 0 }; const st = (d.Status || '').toLowerCase(); if(st.includes('operational')) yearlyData[yr].op++; else if(st.includes('developmental')) yearlyData[yr].dev++; } });
+                CURRENT_VIEW_DB.forEach(d => { 
+                    const st = (d.Status || '').toLowerCase();
+                    const targetDate = (st.includes('developmental') && d.TrainDate) ? d.TrainDate : d.OpDate;
+
+                    const yrMatch = String(targetDate || "").match(/\d{4}/);
+                    if(yrMatch) { 
+                        const yr = yrMatch[0];
+                        if(!yearlyData[yr]) yearlyData[yr] = { op: 0, dev: 0 }; 
+                        if(st.includes('operational')) yearlyData[yr].op++; 
+                        else if(st.includes('developmental')) yearlyData[yr].dev++; 
+                    } 
+                });
                 const years = Object.keys(yearlyData).sort();
                 let accOp = 0, accDev = 0;
                 const timelineBody = years.map(yr => {
@@ -1229,16 +1505,21 @@
                 y += 5;
 
                 const provRows = CURRENT_VIEW_DB.filter(d => d.Province === prov);
-                const tableBody = provRows.map(row => [row.Municipality, row.Status, row.OpDate || '-', row.Remarks || '-']);
+                const tableBody = provRows.map(row => {
+                    const st = (row.Status || '').toLowerCase();
+                    const displayDate = (st.includes('developmental') && row.TrainDate) ? row.TrainDate : (row.OpDate || '-');
+
+                    return [row.Municipality, row.Status, row.EReadiness || '-', displayDate, row.Remarks || '-'];
+                });
 
                 doc.autoTable({
                     startY: y,
-                    head: [['Municipality', 'Status', 'Op. Date', 'Remarks']],
+                    head: [['Municipality', 'Status', 'e-Readiness', 'Op / Train Date', 'Remarks']],
                     body: tableBody,
                     theme: 'grid',
                     headStyles: { fillColor: [0, 51, 153], fontSize: 9 },
                     styles: { fontSize: 8, cellPadding: 2 },
-                    columnStyles: { 0: {cellWidth:50, fontStyle:'bold'}, 1: {cellWidth:30}, 2: {cellWidth:30}, 3: {cellWidth:'auto'} },
+                    columnStyles: { 0: {cellWidth:40, fontStyle:'bold'}, 1: {cellWidth:25}, 2: {cellWidth:25}, 3: {cellWidth:25}, 4: {cellWidth:'auto'} },
                     didParseCell: function(data) {
                         if (data.section === 'body' && data.column.index === 1) {
                             const t = data.cell.text[0].toLowerCase();
