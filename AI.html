@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mara's Auditor - A.I Chat</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .glass {
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226,232,240,.95);
+      box-shadow: 0 12px 32px rgba(15,23,42,.06);
+    }
+    .dark .glass {
+      background: rgba(15,23,42,.78);
+      border-color: rgba(51,65,85,.95);
+      box-shadow: 0 12px 32px rgba(2,6,23,.35);
+    }
+    .thin-scroll::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    .thin-scroll::-webkit-scrollbar-thumb {
+      background: rgba(100,116,139,.35);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen">
+  <div class="min-h-screen flex flex-col">
+    <header class="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-4 md:px-6 py-3">
+      <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shrink-0">
+            <i class="fa-solid fa-clipboard-check"></i>
+          </div>
+          <div class="min-w-0">
+            <h1 class="font-black text-lg md:text-xl truncate">Mara's Auditor</h1>
+            <p class="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500">AI Assistant</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="toggleTheme()" class="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">
+            <i class="fa-solid fa-moon dark:hidden text-slate-500"></i>
+            <i class="fa-solid fa-sun hidden dark:inline text-slate-400"></i>
+          </button>
+
+          <button type="button" onclick="goDashboard()" class="text-xs font-bold px-3 md:px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">
+            Dashboard
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 p-4 md:p-6 overflow-auto thin-scroll">
+      <div class="max-w-5xl mx-auto space-y-4">
+        <div class="glass rounded-3xl p-5">
+          <h2 class="text-xl font-black">A.I Chat</h2>
+          <p class="text-sm text-slate-500 mt-1">
+            Ask about audit scores, trends, records, and logs. The AI can use your audit data and action history.
+          </p>
+        </div>
+
+        <div id="chatBox" class="glass rounded-3xl p-4 md:p-5 min-h-[420px] space-y-4"></div>
+
+        <div class="glass rounded-3xl p-4">
+          <div class="flex flex-col md:flex-row gap-3">
+            <textarea id="aiPrompt" rows="3" placeholder="Example: Summarize the lowest scoring agent and show what actions Mara performed recently." class="flex-1 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:ring-2 ring-blue-500"></textarea>
+            <button onclick="sendAiPrompt()" class="px-5 py-3 rounded-2xl font-bold bg-blue-600 hover:bg-blue-700 text-white md:self-end">
+              <i class="fa-solid fa-paper-plane mr-2"></i>Ask AI
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-4 md:px-6 py-3">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+        <div>© 2026 Mara's Auditor</div>
+        <div>AI-powered audit insights via Google Apps Script + Gemini</div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    let apiUrl = localStorage.getItem('maraAppUrl') || '';
+
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('maraTheme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    }
+
+    function applySavedTheme() {
+      const saved = localStorage.getItem('maraTheme');
+      if (saved === 'dark') document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+    }
+
+    function goDashboard() {
+      window.location.href = 'index.html';
+    }
+
+    function addMsg(role, html) {
+      const box = document.getElementById('chatBox');
+      const isUser = role === 'user';
+
+      const wrap = document.createElement('div');
+      wrap.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+
+      wrap.innerHTML = `
+        <div class="${isUser ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700'} max-w-3xl rounded-2xl px-4 py-3 shadow-sm">
+          <div class="text-[11px] font-black uppercase tracking-wider mb-1 ${isUser ? 'text-blue-100' : 'text-slate-500'}">
+            ${isUser ? 'You' : 'Mara AI'}
+          </div>
+          <div class="text-sm whitespace-pre-wrap">${html}</div>
+        </div>
+      `;
+      box.appendChild(wrap);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendAiPrompt() {
+      const promptEl = document.getElementById('aiPrompt');
+      const prompt = (promptEl.value || '').trim();
+      if (!prompt) return;
+
+      if (!apiUrl) {
+        alert('Please set your Apps Script URL first in the dashboard.');
+        return;
+      }
+
+      addMsg('user', escapeHtml(prompt));
+      promptEl.value = '';
+      addMsg('assistant', 'Thinking...');
+
+      try {
+        const body = new URLSearchParams();
+        body.set('action', 'ai_chat');
+        body.set('prompt', prompt);
+
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: body.toString()
+        });
+
+        const text = await res.text();
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch (e) {
+          throw new Error('Invalid AI response from server.');
+        }
+
+        const box = document.getElementById('chatBox');
+        box.removeChild(box.lastElementChild);
+
+        if (!json || json.status !== 'success') {
+          throw new Error(json?.message || 'AI request failed.');
+        }
+
+        addMsg('assistant', escapeHtml(json.reply || 'No response.'));
+      } catch (error) {
+        const box = document.getElementById('chatBox');
+        if (box.lastElementChild) box.removeChild(box.lastElementChild);
+        addMsg('assistant', escapeHtml(error.message || 'AI request failed.'));
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      applySavedTheme();
+      addMsg('assistant', 'Hello. Ask me anything about your audit records, top performers, low scores, patterns, or logs.');
+    });
+  </script>
+</body>
+</html>
