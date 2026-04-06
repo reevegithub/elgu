@@ -102,6 +102,24 @@
     .dark .ai-msg th { background-color: #1e293b; color: #cbd5e1; border-color: #334155; }
     .ai-msg td { border: 1px solid #e2e8f0; padding: 8px; }
     .dark .ai-msg td { border-color: #334155; }
+  
+    .remarks-cell { max-width: 360px; min-width: 220px; line-height: 1.45; }
+    .remarks-preview {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      white-space: normal;
+      word-break: normal;
+      overflow-wrap: anywhere;
+    }
+    .remarks-full {
+      white-space: normal;
+      word-break: normal;
+      overflow-wrap: anywhere;
+    }
+    .column-toggle-menu { box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12); }
+
   </style>
 </head>
 
@@ -269,19 +287,29 @@
             </select>
             <select id="filterYear" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-white/80 dark:bg-slate-800/80 outline-none w-full md:w-32 focus:ring-1 ring-blue-500"><option value="All">All Years</option></select>
             <div class="relative w-full md:w-48"><i class="fa-solid fa-search absolute left-3 top-2 text-slate-400 text-xs"></i><input type="text" id="searchBox" onkeyup="resetPg();applyFilters()" placeholder="Search LGUs..." class="pl-8 pr-4 py-1.5 bg-white/80 dark:bg-slate-800/80 border rounded-lg text-xs outline-none w-full focus:ring-1 ring-blue-500"></div>
+            <div class="relative w-full md:w-auto">
+              <button type="button" onclick="toggleColumnMenu(event)" class="w-full md:w-auto text-xs border rounded-lg px-3 py-1.5 bg-white/80 dark:bg-slate-800/80 outline-none flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                <i class="fa-solid fa-table-columns text-slate-400"></i>
+                <span>Columns</span>
+              </button>
+              <div id="columnToggleMenu" class="column-toggle-menu hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 z-30">
+                <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Show / Hide Columns</div>
+                <div id="columnToggleList" class="space-y-2"></div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="overflow-x-auto flex-1 w-full relative">
           <table class="w-full text-left text-sm border-collapse">
             <thead class="bg-slate-50/50 dark:bg-slate-900/50 text-[10px] text-slate-500 uppercase font-black border-b border-slate-100 dark:border-slate-800 sticky top-0 z-10 backdrop-blur-sm">
               <tr>
-                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Province')">Province <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
-                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Municipality')">Municipality <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
-                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Status')">Status <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
-                <th class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('EReadiness')">e-Readiness <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
-                <th class="px-6 py-4">Op / Train Date</th>
-                <th class="px-6 py-4">Remarks</th>
-                <th class="px-6 py-4 text-right">Actions</th>
+                <th id="th-Province" class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Province')">Province <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th id="th-Municipality" class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Municipality')">Municipality <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th id="th-Status" class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Status')">Status <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th id="th-EReadiness" class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('EReadiness')">e-Readiness <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th id="th-OpDate" class="px-6 py-4">Op / Train Date</th>
+                <th id="th-Remarks" class="px-6 py-4">Remarks</th>
+                <th id="th-Actions" class="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
@@ -434,6 +462,16 @@
     let chartInstPie = null, chartInstBar = null, chartInstYear = null, chartModalInst = null;
     let compareState = null, snapshotMode = false;
     let curPage = 1, pgSize = 10, sortCol = 'Province', sortAsc = true;
+    let expandedRemarks = new Set();
+    const COLUMN_TOGGLE_KEY = 'elgu_masterlist_visible_columns';
+    const TABLE_COLUMNS = [
+      { key: 'Province', label: 'Province', visible: true },
+      { key: 'Municipality', label: 'Municipality', visible: true },
+      { key: 'Status', label: 'Status', visible: true },
+      { key: 'EReadiness', label: 'e-Readiness', visible: true },
+      { key: 'OpDate', label: 'Op / Train Date', visible: true },
+      { key: 'Remarks', label: 'Remarks', visible: true }
+    ];
 
     // ... (Dropdown options & Edit form config)
     const DROPDOWN_OPTIONS = {
@@ -523,6 +561,7 @@
     };
 
     window.onload = () => {
+      loadColumnVisibility();
       if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
       if (API_URL) {
         document.getElementById('apiUrl').value = API_URL;
@@ -537,6 +576,102 @@
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function toggleDrawer() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('drawerOverlay').classList.toggle('open'); }
+
+    function loadColumnVisibility() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(COLUMN_TOGGLE_KEY) || '{}');
+        TABLE_COLUMNS.forEach(col => {
+          if (typeof saved[col.key] === 'boolean') col.visible = saved[col.key];
+        });
+      } catch (e) {}
+    }
+
+    function saveColumnVisibility() {
+      const payload = {};
+      TABLE_COLUMNS.forEach(col => payload[col.key] = col.visible);
+      localStorage.setItem(COLUMN_TOGGLE_KEY, JSON.stringify(payload));
+    }
+
+    function renderColumnToggleMenu() {
+      const list = document.getElementById('columnToggleList');
+      if (!list) return;
+      list.innerHTML = TABLE_COLUMNS.map(col => `
+        <label class="flex items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+          <span>${col.label}</span>
+          <input type="checkbox" ${col.visible ? 'checked' : ''} onchange="setColumnVisibility('${col.key}', this.checked)" class="rounded border-slate-300 dark:border-slate-600">
+        </label>
+      `).join('');
+    }
+
+    function updateColumnHeaders() {
+      TABLE_COLUMNS.forEach(col => {
+        const th = document.getElementById('th-' + col.key);
+        if (th) th.style.display = col.visible ? '' : 'none';
+      });
+    }
+
+    function toggleColumnMenu(event) {
+      if (event) event.stopPropagation();
+      const menu = document.getElementById('columnToggleMenu');
+      if (!menu) return;
+      renderColumnToggleMenu();
+      menu.classList.toggle('hidden');
+    }
+
+    function closeColumnMenu() {
+      const menu = document.getElementById('columnToggleMenu');
+      if (menu) menu.classList.add('hidden');
+    }
+
+    function setColumnVisibility(key, visible) {
+      const column = TABLE_COLUMNS.find(col => col.key === key);
+      if (!column) return;
+      column.visible = visible;
+      saveColumnVisibility();
+      updateColumnHeaders();
+      applyFilters();
+      renderColumnToggleMenu();
+    }
+
+    function isColumnVisible(key) {
+      const column = TABLE_COLUMNS.find(col => col.key === key);
+      return column ? column.visible : true;
+    }
+
+    function toggleRemarks(rowId) {
+      if (expandedRemarks.has(rowId)) expandedRemarks.delete(rowId);
+      else expandedRemarks.add(rowId);
+      applyFilters();
+    }
+
+    function updateRemarksOverflow() {
+      document.querySelectorAll('.remarks-cell').forEach(cell => {
+        const preview = cell.querySelector('.remarks-preview');
+        const button = cell.querySelector('.remarks-toggle-btn');
+        const full = cell.querySelector('.remarks-full');
+        if (!button) return;
+
+        if (full) {
+          button.classList.remove('hidden');
+          return;
+        }
+
+        if (!preview) {
+          button.classList.add('hidden');
+          return;
+        }
+
+        const hasOverflow = preview.scrollHeight > preview.clientHeight + 1;
+        if (hasOverflow) button.classList.remove('hidden');
+        else button.classList.add('hidden');
+      });
+    }
+
+    document.addEventListener('click', function(event) {
+      const menu = document.getElementById('columnToggleMenu');
+      if (!menu) return;
+      if (!menu.contains(event.target)) closeColumnMenu();
+    });
 
     async function checkVersion() { try { const res = await fetch(`${API_URL}?action=checkVersion`); const json = await res.json(); if (json.version && json.version !== CURRENT_VERSION) { document.getElementById('remoteVersionDisplay').innerText = `New: V${json.version}`; document.getElementById('forceUpdateModal').classList.remove('hidden'); } } catch(e) {} }
     async function initData() { showLoading(); const p = fetchLiveData(); const t = new Promise((r)=>setTimeout(()=>r('timeout'), 10000)); const res = await Promise.race([p, t]); if (res === 'timeout') { hideLoading(); alert("Timeout"); toggleSettings(); } else { await fetchHistoryList(); hideLoading(); } }
@@ -581,7 +716,7 @@
         }).filter(x => x.Municipality); 
     }
 
-    function renderDashboard() { renderSidebar(); updateStats(); renderCharts(); populateYearFilter(); resetPg(); applyFilters(); }
+    function renderDashboard() { renderSidebar(); updateStats(); renderCharts(); populateYearFilter(); updateColumnHeaders(); renderColumnToggleMenu(); resetPg(); applyFilters(); }
     
     function renderSidebar() { const nav = document.getElementById('sidebar-nav'); const provs = [...new Set(LIVE_DB.map(x => x.Province).filter(Boolean))].sort(); const allBtn = `<button onclick="filterProv('All')" class="sb-btn ${activeFilter === 'All' ? 'active' : ''}"><span class="flex items-center gap-2"><i class="fa-solid fa-globe opacity-70"></i> <span>All Provinces</span></span><span class="sb-pill">${LIVE_DB.length}</span></button>`; nav.innerHTML = allBtn + provs.map(p => `<button onclick="filterProv('${escapeQuotes(p)}')" class="sb-btn ${activeFilter === p ? 'active' : ''}"><span class="truncate">${p}</span><span class="sb-pill">${LIVE_DB.filter(d => d.Province === p).length}</span></button>`).join(''); }
     function escapeQuotes(s) { return String(s).replace(/'/g, "\\'"); }
@@ -893,11 +1028,11 @@
     function renderTable(data) { 
         const tbody = document.getElementById('tableBody'); 
         tbody.innerHTML = ''; 
-        
+
         data.forEach((row) => { 
             const c = statusColor(row.Status); 
             const gIdx = LIVE_DB.findIndex(x => x.ID === row.ID); 
-            
+
             const st = (row.Status || '').toLowerCase();
             const displayDate = (st.includes('developmental') && row.TrainDate) ? row.TrainDate : (row.OpDate || '-');
 
@@ -905,7 +1040,25 @@
             const eReadC = eReadVal.includes('not') ? '#ef4444' : (eReadVal.includes('ready') ? '#22c55e' : '#94a3b8');
             const eReadHTML = row.EReadiness ? `<span class="badge" style="background:${eReadC}20; color:${eReadC}">${row.EReadiness}</span>` : '-';
 
-            tbody.innerHTML += `<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition border-b border-slate-50 dark:border-slate-800/50"><td class="px-6 py-4 font-black text-slate-400 text-[10px] uppercase">${row.Province || '-'}</td><td class="px-6 py-4 font-bold text-slate-800 dark:text-slate-200 text-xs">${row.Municipality}</td><td class="px-6 py-4"><span class="badge" style="background:${c}20; color:${c}">${row.Status || '-'}</span></td><td class="px-6 py-4">${eReadHTML}</td><td class="px-6 py-4 text-xs font-mono text-slate-500">${displayDate}</td><td class="px-6 py-4 text-[10px] text-slate-400 truncate max-w-[150px]">${row.Remarks || '-'}</td><td class="px-6 py-4 text-right flex justify-end gap-2"><button onclick="openViewModal(${gIdx})" class="text-[10px] font-black text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:text-dict-blue uppercase tracking-tighter transition">View</button><button onclick="openEditModal(${gIdx})" class="text-[10px] font-black text-white bg-dict-blue px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-700 uppercase tracking-tighter transition">Edit</button></td></tr>`; 
+            const rowId = String(row.ID || row.Municipality || Math.random());
+            const remarksText = row.Remarks || '-';
+            const remarksExpanded = expandedRemarks.has(rowId);
+            const remarksHtml = remarksText === '-'
+              ? '-'
+              : `<div class="remarks-cell">
+                    <div class="${remarksExpanded ? 'remarks-full' : 'remarks-preview'}" title="${String(remarksText).replace(/"/g, '&quot;')}">${remarksText}</div>
+                    <button type="button" onclick="toggleRemarks('${String(rowId).replace(/'/g, "\'")}')" class="remarks-toggle-btn mt-2 text-[10px] font-black uppercase tracking-wider text-dict-blue dark:text-blue-400 hover:underline ${remarksExpanded ? '' : 'hidden'}">${remarksExpanded ? 'View less' : 'View more'}</button>
+                 </div>`;
+
+            let cells = '';
+            if (isColumnVisible('Province')) cells += `<td class="px-6 py-4 font-black text-slate-400 text-[10px] uppercase">${row.Province || '-'}</td>`;
+            if (isColumnVisible('Municipality')) cells += `<td class="px-6 py-4 font-bold text-slate-800 dark:text-slate-200 text-xs">${row.Municipality}</td>`;
+            if (isColumnVisible('Status')) cells += `<td class="px-6 py-4"><span class="badge" style="background:${c}20; color:${c}">${row.Status || '-'}</span></td>`;
+            if (isColumnVisible('EReadiness')) cells += `<td class="px-6 py-4">${eReadHTML}</td>`;
+            if (isColumnVisible('OpDate')) cells += `<td class="px-6 py-4 text-xs font-mono text-slate-500">${displayDate}</td>`;
+            if (isColumnVisible('Remarks')) cells += `<td class="px-6 py-4 text-[10px] text-slate-500 align-top">${remarksHtml}</td>`;
+
+            tbody.innerHTML += `<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition border-b border-slate-50 dark:border-slate-800/50">${cells}<td class="px-6 py-4 text-right"><div class="flex justify-end gap-2"><button onclick="openViewModal(${gIdx})" class="text-[10px] font-black text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:text-dict-blue uppercase tracking-tighter transition">View</button><button onclick="openEditModal(${gIdx})" class="text-[10px] font-black text-white bg-dict-blue px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-700 uppercase tracking-tighter transition">Edit</button></div></td></tr>`; 
         }); 
     }
 
