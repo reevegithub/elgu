@@ -119,6 +119,8 @@
       overflow-wrap: anywhere;
     }
     .column-toggle-menu { box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12); }
+    #mapProvPanel.collapsed-panel #mapProvPanelBody { display: none; }
+    #mapProvPanel.collapsed-panel #mapProvPanelChevron { transform: rotate(180deg); }
 
   </style>
 </head>
@@ -306,6 +308,7 @@
                 <th id="th-Province" class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Province')">Province <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
                 <th id="th-Municipality" class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Municipality')">Municipality <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
                 <th id="th-Status" class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('Status')">Status <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
+                <th id="th-Version" class="px-6 py-4">Version</th>
                 <th id="th-EReadiness" class="px-6 py-4 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50" onclick="sortData('EReadiness')">e-Readiness <i class="fa-solid fa-sort ml-1 opacity-40"></i></th>
                 <th id="th-OpDate" class="px-6 py-4">Op / Train Date</th>
                 <th id="th-Remarks" class="px-6 py-4">Remarks</th>
@@ -335,6 +338,13 @@
            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:#f59e0b; box-shadow: 0 0 4px #f59e0b"></span> With LOI</div>
            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:#ef4444; box-shadow: 0 0 4px #ef4444"></span> No LOI</div>
         </div>
+      </div>
+      <div id="mapProvPanel" class="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-xl shadow-xl z-[999] border dark:border-slate-700 w-56 max-h-[calc(100%-2rem)] flex flex-col overflow-hidden">
+        <div class="p-3 border-b dark:border-slate-700 flex justify-between items-center">
+          <div class="font-black text-[10px] uppercase text-slate-500 tracking-widest">Provincial Breakdown</div>
+          <button onclick="document.getElementById('mapProvPanel').classList.toggle('collapsed-panel')" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs"><i class="fa-solid fa-chevron-up" id="mapProvPanelChevron"></i></button>
+        </div>
+        <div id="mapProvPanelBody" class="overflow-y-auto flex-1 p-2 space-y-1"></div>
       </div>
     </main>
 
@@ -468,6 +478,7 @@
       { key: 'Province', label: 'Province', visible: true },
       { key: 'Municipality', label: 'Municipality', visible: true },
       { key: 'Status', label: 'Status', visible: true },
+      { key: 'Version', label: 'Version', visible: true },
       { key: 'EReadiness', label: 'e-Readiness', visible: true },
       { key: 'OpDate', label: 'Op / Train Date', visible: true },
       { key: 'Remarks', label: 'Remarks', visible: true }
@@ -1054,6 +1065,22 @@
             if (isColumnVisible('Province')) cells += `<td class="px-6 py-4 font-black text-slate-400 text-[10px] uppercase">${row.Province || '-'}</td>`;
             if (isColumnVisible('Municipality')) cells += `<td class="px-6 py-4 font-bold text-slate-800 dark:text-slate-200 text-xs">${row.Municipality}</td>`;
             if (isColumnVisible('Status')) cells += `<td class="px-6 py-4"><span class="badge" style="background:${c}20; color:${c}">${row.Status || '-'}</span></td>`;
+            if (isColumnVisible('Version')) {
+                const v1Op = String(row._raw['V1 Operational'] || '').toUpperCase() === 'TRUE';
+                const v2Op = String(row._raw['V2 Operational'] || '').toUpperCase() === 'TRUE';
+                const v2Dev = String(row._raw['V2 Developmental'] || row._raw['V2 Developmen tal'] || '').toUpperCase() === 'TRUE';
+                let vBadges = '';
+                if (v1Op) vBadges += `<span class="badge mr-1" style="background:#22c55e20;color:#16a34a">V1</span>`;
+                if (v2Op || v2Dev) vBadges += `<span class="badge" style="background:#3b82f620;color:#2563eb">V2</span>`;
+                if (!vBadges) {
+                    const ver = (row.Version || '').toUpperCase();
+                    if (ver.includes('V1')) vBadges = `<span class="badge" style="background:#22c55e20;color:#16a34a">V1</span>`;
+                    else if (ver.includes('V2')) vBadges = `<span class="badge" style="background:#3b82f620;color:#2563eb">V2</span>`;
+                    else if (ver.includes('BOTH')) vBadges = `<span class="badge mr-1" style="background:#22c55e20;color:#16a34a">V1</span><span class="badge" style="background:#3b82f620;color:#2563eb">V2</span>`;
+                    else vBadges = ver ? `<span class="badge" style="background:#94a3b820;color:#64748b">${row.Version}</span>` : '-';
+                }
+                cells += `<td class="px-6 py-4 whitespace-nowrap">${vBadges}</td>`;
+            }
             if (isColumnVisible('EReadiness')) cells += `<td class="px-6 py-4">${eReadHTML}</td>`;
             if (isColumnVisible('OpDate')) cells += `<td class="px-6 py-4 text-xs font-mono text-slate-500">${displayDate}</td>`;
             if (isColumnVisible('Remarks')) cells += `<td class="px-6 py-4 text-[10px] text-slate-500 align-top">${remarksHtml}</td>`;
@@ -1062,9 +1089,38 @@
         }); 
     }
 
-    function initMap() { if (document.getElementById('view-map').classList.contains('hidden')) return; if (map) map.remove(); map = L.map('map').setView([17.2, 121.0], 8); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map); renderMapMarkers(CURRENT_VIEW_DB); }
+    function initMap() { if (document.getElementById('view-map').classList.contains('hidden')) return; if (map) map.remove(); map = L.map('map').setView([17.2, 121.0], 8); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map); renderMapMarkers(CURRENT_VIEW_DB); renderMapProvPanel(CURRENT_VIEW_DB); }
+
+    function renderMapProvPanel(data) {
+      const body = document.getElementById('mapProvPanelBody');
+      if (!body) return;
+      const provs = [...new Set(data.map(x => x.Province).filter(Boolean))].sort();
+      if (!provs.length) { body.innerHTML = '<div class="text-[10px] text-slate-400 p-2">No data</div>'; return; }
+      body.innerHTML = provs.map(p => {
+        const sub = data.filter(d => d.Province === p);
+        const s = getStatsFrom(sub);
+        return `<div class="rounded-lg p-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer" onclick="filterProv('${escapeQuotes(p)}')">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[10px] font-black text-slate-700 dark:text-slate-200 truncate">${p}</span>
+            <span class="text-[9px] font-bold text-slate-400">${sub.length}</span>
+          </div>
+          <div class="flex gap-0.5 h-1.5 rounded overflow-hidden w-full">
+            ${s.op ? `<div style="width:${(s.op/sub.length*100).toFixed(1)}%;background:#22c55e" title="Operational: ${s.op}"></div>` : ''}
+            ${s.dev ? `<div style="width:${(s.dev/sub.length*100).toFixed(1)}%;background:#3b82f6" title="Developmental: ${s.dev}"></div>` : ''}
+            ${s.loi ? `<div style="width:${(s.loi/sub.length*100).toFixed(1)}%;background:#f59e0b" title="With LOI: ${s.loi}"></div>` : ''}
+            ${s.no ? `<div style="width:${(s.no/sub.length*100).toFixed(1)}%;background:#ef4444" title="No LOI: ${s.no}"></div>` : ''}
+          </div>
+          <div class="flex flex-wrap gap-1.5 mt-1 text-[9px] font-bold">
+            <span class="text-green-600">${s.op} Op</span>
+            <span class="text-blue-600">${s.dev} Dev</span>
+            <span class="text-yellow-600">${s.loi} LOI</span>
+            <span class="text-red-500">${s.no} No LOI</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
     function statusColor(status) { const s = (status || '').toLowerCase(); if (s.includes('operational')) return '#22c55e'; if (s.includes('developmental')) return '#3b82f6'; if (s.includes('no loi')) return '#ef4444'; if (s.includes('with loi') || s.includes('loi')) return '#f59e0b'; return '#ef4444'; }
-    function renderMapMarkers(data) { if (!map) return; markers.forEach(m => map.removeLayer(m)); markers = []; data.forEach(d => { const lat = parseFloat(d.Lat); const lng = parseFloat(d.Lng); if (!isFinite(lat) || !isFinite(lng)) return; const c = statusColor(d.Status); const popup = `<div style="min-width:180px"><div style="font-weight:900">${d.Municipality}</div><div style="font-size:12px; opacity:.85">${d.Province || '-'}</div><div style="margin-top:6px; font-size:12px"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:${c};margin-right:6px"></span><b>${d.Status || '-'}</b></div><div style="margin-top:4px; font-size:10px; color:#666; font-style:italic; border-top:1px solid #eee; padding-top:4px">${d.Remarks || 'No remarks'}</div></div>`; markers.push(L.circleMarker([lat, lng], { radius: 6, fillColor: c, color: '#fff', weight: 1, fillOpacity: 0.9 }).bindPopup(popup).addTo(map)); }); }
+    function renderMapMarkers(data) { if (!map) return; markers.forEach(m => map.removeLayer(m)); markers = []; renderMapProvPanel(data); data.forEach(d => { const lat = parseFloat(d.Lat); const lng = parseFloat(d.Lng); if (!isFinite(lat) || !isFinite(lng)) return; const c = statusColor(d.Status); const popup = `<div style="min-width:180px"><div style="font-weight:900">${d.Municipality}</div><div style="font-size:12px; opacity:.85">${d.Province || '-'}</div><div style="margin-top:6px; font-size:12px"><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:${c};margin-right:6px"></span><b>${d.Status || '-'}</b></div><div style="margin-top:4px; font-size:10px; color:#666; font-style:italic; border-top:1px solid #eee; padding-top:4px">${d.Remarks || 'No remarks'}</div></div>`; markers.push(L.circleMarker([lat, lng], { radius: 6, fillColor: c, color: '#fff', weight: 1, fillOpacity: 0.9 }).bindPopup(popup).addTo(map)); }); }
 
     // DOWNLOAD DOC FUNCTION
     function downloadDoc(content) {
@@ -1267,7 +1323,7 @@
       document.getElementById('cmpLabelA').innerText = compareState.A; document.getElementById('cmpLabelB').innerText = compareState.B;
       document.getElementById('cmpChangedBig').innerText = compareState.changedRows.length;
       document.getElementById('cmpSubtitle').innerText = `${compareState.A} vs ${compareState.B}`;
-      const keys = [{k:'op', l:'Operational', c:'green'}, {k:'dev', l:'Developmental', c:'blue'}, {k:'loi', l:'With LOI', c:'yellow'}, {k:'no', l:'No LOI', c:'red'}];
+      const keys = [{k:'op', l:'Operational', c:'green'}, {k:'dev', l:'Developmental', c:'blue'}, {k:'loi', l:'With LOI', c:'yellow'}, {k:'No', l:'No LOI', c:'red'}];
       const htmlStats = keys.map(i => {
          const v1 = compareState.statsA[i.k]; const v2 = compareState.statsB[i.k];
          const diff = v2 - v1;
