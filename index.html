@@ -1509,7 +1509,7 @@ USER QUESTION: ${txt}`;
       document.getElementById('cmpLabelA').innerText = compareState.A; document.getElementById('cmpLabelB').innerText = compareState.B;
       document.getElementById('cmpChangedBig').innerText = compareState.changedRows.length;
       document.getElementById('cmpSubtitle').innerText = `${compareState.A} vs ${compareState.B}`;
-      const keys = [{k:'op', l:'Operational', c:'green'}, {k:'dev', l:'Developmental', c:'blue'}, {k:'loi', l:'With LOI', c:'yellow'}, {k:'No', l:'No LOI', c:'red'}];
+      const keys = [{k:'op', l:'Operational', c:'green'}, {k:'dev', l:'Developmental', c:'blue'}, {k:'loi', l:'With LOI', c:'yellow'}, {k:'no', l:'No LOI', c:'red'}];
       const htmlStats = keys.map(i => {
          const v1 = compareState.statsA[i.k]; const v2 = compareState.statsB[i.k];
          const diff = v2 - v1;
