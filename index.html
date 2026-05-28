@@ -308,6 +308,9 @@
             <select id="filterStatus" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-white/80 dark:bg-slate-800/80 outline-none w-full md:w-32 focus:ring-1 ring-blue-500">
               <option value="All">All Status</option><option value="Operational">Operational</option><option value="Developmental">Developmental</option><option value="With LOI">With LOI</option><option value="No LOI">No LOI</option>
             </select>
+            <select id="filterVersion" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-white/80 dark:bg-slate-800/80 outline-none w-full md:w-32 focus:ring-1 ring-blue-500">
+              <option value="All">All Versions</option><option value="V1">V1</option><option value="V2">V2</option><option value="BOTH">BOTH</option>
+            </select>
             <select id="filterYear" onchange="resetPg();applyFilters()" class="text-xs border rounded-lg px-2 py-1.5 bg-white/80 dark:bg-slate-800/80 outline-none w-full md:w-32 focus:ring-1 ring-blue-500"><option value="All">All Years</option></select>
             <div class="relative w-full md:w-48"><i class="fa-solid fa-search absolute left-3 top-2 text-slate-400 text-xs"></i><input type="text" id="searchBox" onkeyup="resetPg();applyFilters()" placeholder="Search LGUs..." class="pl-8 pr-4 py-1.5 bg-white/80 dark:bg-slate-800/80 border rounded-lg text-xs outline-none w-full focus:ring-1 ring-blue-500"></div>
             <div class="relative w-full md:w-auto">
@@ -900,6 +903,24 @@
       return s;
     }
     
+    function getVersionBucket(row) {
+        const v1Op = String(row._raw['V1 Operational'] || '').toUpperCase() === 'TRUE';
+        const v2Op = String(row._raw['V2 Operational'] || '').toUpperCase() === 'TRUE';
+        const v2Dev = String(row._raw['V2 Developmental'] || row._raw['V2 Developmen tal'] || '').toUpperCase() === 'TRUE';
+        const hasV1 = v1Op;
+        const hasV2 = v2Op || v2Dev;
+
+        if (hasV1 && hasV2) return 'BOTH';
+        if (hasV1) return 'V1';
+        if (hasV2) return 'V2';
+
+        const ver = String(row.Version || '').toLowerCase();
+        if (ver.includes('both') || (ver.includes('v1') && ver.includes('v2'))) return 'BOTH';
+        if (ver.includes('v1')) return 'V1';
+        if (ver.includes('v2')) return 'V2';
+        return '';
+    }
+
     function getVersionStats(data, status) {
         // 1. Calculate v1ToV2 GLOBALLY so Operational LGUs still count towards this metric
         let v1ToV2 = 0;
@@ -1153,11 +1174,13 @@
         const status = document.getElementById('filterStatus').value; 
         const year = document.getElementById('filterYear').value; 
         const eread = document.getElementById('filterEReadiness').value;
+        const version = document.getElementById('filterVersion').value;
         
         let data = CURRENT_VIEW_DB; 
         
         if (txt) data = data.filter(d => JSON.stringify(d).toLowerCase().includes(txt)); 
         if (status !== 'All') data = data.filter(d => (d.Status || "").includes(status)); 
+        if (version !== 'All') data = data.filter(d => getVersionBucket(d) === version);
         
         if (eread !== 'All') {
             const isNot = eread.toLowerCase().includes('not');
