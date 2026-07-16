@@ -10,6 +10,9 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
@@ -422,23 +425,24 @@
         </div>
 
         <div class="glass-panel overflow-hidden">
-          <div class="p-3 border-b dark:border-slate-800 flex flex-col lg:flex-row gap-3 lg:items-center bg-white/50 dark:bg-slate-900/50">
-            <div class="flex gap-2 overflow-x-auto">
-              <button id="workTab-calendar" onclick="switchWorkTab('calendar')" class="work-tab active px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-regular fa-calendar mr-2"></i>Calendar</button>
-              <button id="workTab-activities" onclick="switchWorkTab('activities')" class="work-tab px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-person-running mr-2"></i>Activities</button>
-              <button id="workTab-personal" onclick="switchWorkTab('personal')" class="work-tab px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-user-check mr-2"></i>My Tasks</button>
-              <button id="workTab-team" onclick="switchWorkTab('team')" class="work-tab px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-people-group mr-2"></i>Team Tasks</button>
-              <button id="workTab-documents" onclick="switchWorkTab('documents')" class="work-tab px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-folder-open mr-2"></i>Documents</button>
-              <button id="workTab-notes" onclick="switchWorkTab('notes')" class="work-tab px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-note-sticky mr-2"></i>Notes</button>
+          <div class="p-3 border-b dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 space-y-3">
+            <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-2 w-full">
+              <button id="workTab-calendar" onclick="switchWorkTab('calendar')" class="work-tab active w-full px-3 py-2.5 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-regular fa-calendar mr-2"></i>Calendar</button>
+              <button id="workTab-activitymap" onclick="switchWorkTab('activitymap')" class="work-tab w-full px-3 py-2.5 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-map-location-dot mr-2"></i>Activity Map</button>
+              <button id="workTab-activities" onclick="switchWorkTab('activities')" class="work-tab w-full px-3 py-2.5 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-person-running mr-2"></i>Activities</button>
+              <button id="workTab-personal" onclick="switchWorkTab('personal')" class="work-tab w-full px-3 py-2.5 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-user-check mr-2"></i>My Tasks</button>
+              <button id="workTab-team" onclick="switchWorkTab('team')" class="work-tab w-full px-3 py-2.5 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-people-group mr-2"></i>Team Tasks</button>
+              <button id="workTab-documents" onclick="switchWorkTab('documents')" class="work-tab w-full px-3 py-2.5 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-folder-open mr-2"></i>Documents</button>
+              <button id="workTab-notes" onclick="switchWorkTab('notes')" class="work-tab w-full px-3 py-2.5 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-note-sticky mr-2"></i>Notes</button>
             </div>
-            <div class="lg:ml-auto flex gap-2">
-              <select id="workCategoryFilter" onchange="renderWorkHub()" class="text-xs border rounded-lg px-3 py-2 bg-white/80 dark:bg-slate-800/80 outline-none">
+            <div class="flex flex-col sm:flex-row gap-2 w-full sm:justify-end">
+              <select id="workCategoryFilter" onchange="renderWorkHub()" class="w-full sm:w-48 text-xs border rounded-lg px-3 py-2.5 bg-white/80 dark:bg-slate-800/80 outline-none">
                 <option value="All">All categories</option><option>Activity</option><option>Training</option><option>Event</option><option>Meeting</option><option>Deadline</option><option>Other</option>
               </select>
-              <select id="workStatusFilter" onchange="renderWorkHub()" class="text-xs border rounded-lg px-3 py-2 bg-white/80 dark:bg-slate-800/80 outline-none">
+              <select id="workStatusFilter" onchange="renderWorkHub()" class="w-full sm:w-48 text-xs border rounded-lg px-3 py-2.5 bg-white/80 dark:bg-slate-800/80 outline-none">
                 <option value="All">All statuses</option><option>Planned</option><option>Ongoing</option><option>Completed</option><option>Cancelled</option><option>To Do</option><option>In Progress</option><option>Blocked</option><option>Done</option><option>Draft</option><option>For Review</option><option>Open</option><option>Resolved</option><option>Archived</option>
               </select>
-              <input id="workSearch" oninput="renderWorkHub()" type="search" placeholder="Search work..." class="min-w-0 w-full lg:w-56 text-xs border rounded-lg px-3 py-2 bg-white/80 dark:bg-slate-800/80 outline-none focus:ring-1 ring-blue-500">
+              <input id="workSearch" oninput="renderWorkHub()" type="search" placeholder="Search work..." class="min-w-0 w-full sm:max-w-sm text-xs border rounded-lg px-3 py-2.5 bg-white/80 dark:bg-slate-800/80 outline-none focus:ring-1 ring-blue-500">
             </div>
           </div>
 
@@ -451,6 +455,21 @@
             <div class="grid grid-cols-7 text-center text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
             <div id="calendarGrid" class="grid grid-cols-7 border-l border-t border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"></div>
             <div class="flex flex-wrap gap-4 mt-4 text-[10px] font-bold text-slate-500"><span><i class="fa-solid fa-circle text-emerald-500 mr-1"></i>Activity</span><span><i class="fa-solid fa-circle text-orange-500 mr-1"></i>Training</span><span><i class="fa-solid fa-circle text-pink-500 mr-1"></i>Event</span><span><i class="fa-solid fa-circle text-cyan-500 mr-1"></i>Meeting</span><span><i class="fa-solid fa-circle text-blue-500 mr-1"></i>Personal task</span><span><i class="fa-solid fa-circle text-violet-500 mr-1"></i>Team task</span><span><i class="fa-solid fa-circle text-amber-500 mr-1"></i>Subtask due</span></div>
+          </section>
+
+          <section id="workPanel-activitymap" class="work-panel hidden">
+            <div class="p-3 border-b dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex flex-col xl:flex-row xl:items-center gap-3">
+              <div><div class="text-xs font-black"><i class="fa-solid fa-wand-magic-sparkles text-violet-600 mr-2"></i>AI-assisted activity locations</div><div class="text-[9px] text-slate-400 mt-1">Pins are saved with each activity and refreshed when its venue or location changes.</div></div>
+              <div class="xl:ml-auto flex flex-wrap items-center gap-2">
+                <select id="activityMapPeriodFilter" onchange="renderActivityMap()" class="text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800"><option value="week">This week</option><option value="month" selected>This month</option><option value="year">This year</option><option value="all">All dates</option></select>
+                <input id="activityMapDateAnchor" type="date" onchange="renderActivityMap()" class="text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800">
+                <button id="btnSyncActivityMap" onclick="syncActivityMapLocations(true)" class="px-3 py-2 rounded-lg bg-violet-600 text-white text-[10px] font-black"><i class="fa-solid fa-rotate mr-1"></i>Sync locations</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] min-h-[560px]">
+              <div class="relative min-h-[520px]"><div id="activityMap" class="absolute inset-0"></div><div class="absolute bottom-4 left-4 z-[700] rounded-xl bg-white/95 dark:bg-slate-900/95 border dark:border-slate-700 shadow-lg p-3 text-[9px]"><div class="font-black uppercase text-slate-400 mb-2">Schedule types</div><div class="grid grid-cols-2 gap-x-4 gap-y-1"><span><i class="fa-solid fa-circle text-emerald-500 mr-1"></i>Activity</span><span><i class="fa-solid fa-circle text-orange-500 mr-1"></i>Training</span><span><i class="fa-solid fa-circle text-pink-500 mr-1"></i>Event</span><span><i class="fa-solid fa-circle text-cyan-500 mr-1"></i>Meeting</span><span><i class="fa-solid fa-circle text-red-500 mr-1"></i>Deadline</span><span><i class="fa-solid fa-circle text-slate-500 mr-1"></i>Other</span></div></div></div>
+              <aside class="border-l dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 min-h-0 flex flex-col"><div class="p-4 border-b dark:border-slate-800"><div class="flex justify-between items-center"><div class="text-xs font-black uppercase tracking-wider">Mapped schedules</div><span id="activityMapPinCount" class="text-[9px] font-black rounded-full bg-blue-100 text-blue-700 px-2 py-1">0 pins</span></div><div id="activityMapSyncStatus" class="text-[9px] text-slate-400 mt-2">Waiting for activity locations.</div></div><div id="activityMapList" class="overflow-y-auto p-3 space-y-2 max-h-[510px]"></div></aside>
+            </div>
           </section>
 
           <section id="workPanel-activities" class="work-panel hidden">
@@ -732,7 +751,7 @@
     let REFRESH_TIMER = null;
     let WORK_ACTIVITIES = [], WORK_TASKS = [], WORK_SUBTASKS = [], WORK_DOCUMENTS = [], WORK_NOTES = [], TASK_DRAFT_SUBTASKS = [], WORK_LOADED = false, WORK_NEEDS_SETUP = false;
     let activeWorkTab = 'calendar', calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    let activeFilter = 'All', map = null, markers = [];
+    let activeFilter = 'All', map = null, markers = [], activityMap = null, activityMapCluster = null, activityMapMarkers = [], ACTIVITY_MAP_SYNCING = false;
     let chartInstPie = null, chartInstBar = null, chartInstYear = null, chartModalInst = null;
     let compareState = null, snapshotMode = false;
     let curPage = 1, pgSize = 10, sortCol = 'Province', sortAsc = true;
@@ -949,7 +968,7 @@
     }
 
     async function apiRequest(action, payload = {}) {
-      if (LOCAL_AUTH_BYPASS && !CURRENT_TOKEN && !LOCAL_SYNC_KEY && ['getWorkData', 'setupDatabase', 'migrateActivities', 'migrateLegacyData', 'saveActivity', 'deleteActivity', 'saveTask', 'deleteTask', 'saveSubtask', 'deleteSubtask', 'saveDocument', 'deleteDocument', 'saveNote', 'deleteNote'].includes(action)) {
+      if (LOCAL_AUTH_BYPASS && !CURRENT_TOKEN && !LOCAL_SYNC_KEY && ['getWorkData', 'setupDatabase', 'migrateActivities', 'migrateLegacyData', 'syncActivityMap', 'saveActivity', 'deleteActivity', 'saveTask', 'deleteTask', 'saveSubtask', 'deleteSubtask', 'saveDocument', 'deleteDocument', 'saveNote', 'deleteNote'].includes(action)) {
         return localWorkApiRequest(action, payload);
       }
       if (!API_URL) throw new Error('Connect the Apps Script URL in Settings first.');
@@ -1019,6 +1038,7 @@
         writeLocalWorkDatabase(database);
         return Promise.resolve({ status: 'success', setup: { created: ['Local DB_Activities', 'Local DB_Tasks', 'Local DB_Subtasks', 'Local DB_Documents', 'Local DB_Notes'], existing: [] }, migration: { imported: 0, sourceSheets: [] }, localMode: true });
       }
+      if (action === 'syncActivityMap') return Promise.resolve({ status: 'success', sync: { processed: 0, updated: 0, remaining: 0, records: [] }, localMode: true });
       const now = new Date().toISOString();
       if (action === 'saveActivity' || action === 'saveTask' || action === 'saveSubtask' || action === 'saveDocument' || action === 'saveNote') {
         database.initialized = true;
@@ -1840,6 +1860,7 @@ USER QUESTION: ${txt}`;
         document.getElementById('workLocalNotice').classList.toggle('hidden', !LOCAL_AUTH_BYPASS);
         if (LOCAL_AUTH_BYPASS) renderLocalSyncNotice(Boolean(result.localMode));
         renderWorkHub();
+        if (!result.needsSetup && (!LOCAL_AUTH_BYPASS || LOCAL_SYNC_KEY)) syncActivityMapLocations(false);
       } catch (error) {
         console.error(error);
         if (LOCAL_AUTH_BYPASS && LOCAL_SYNC_KEY && /local dev|sync key|sign-in session|unauthor/i.test(String(error.message || ''))) {
@@ -1886,7 +1907,7 @@ USER QUESTION: ${txt}`;
       const categoryFilter = document.getElementById('workCategoryFilter');
       const activityStatuses = ['Planned', 'Ongoing', 'Completed', 'Cancelled'];
       const taskStatuses = ['To Do', 'In Progress', 'Blocked', 'Done'];
-      if (tab === 'activities' && !['All', ...activityStatuses].includes(statusFilter.value)) statusFilter.value = 'All';
+      if (['activities', 'activitymap'].includes(tab) && !['All', ...activityStatuses].includes(statusFilter.value)) statusFilter.value = 'All';
       if (['personal', 'team'].includes(tab) && !['All', ...taskStatuses].includes(statusFilter.value)) statusFilter.value = 'All';
       if (tab === 'documents' && !['All', 'Draft', 'For Review', 'Completed', 'Archived'].includes(statusFilter.value)) statusFilter.value = 'All';
       if (tab === 'notes' && !['All', 'Open', 'In Progress', 'Resolved', 'Archived'].includes(statusFilter.value)) statusFilter.value = 'All';
@@ -1896,12 +1917,14 @@ USER QUESTION: ${txt}`;
       document.getElementById(`workPanel-${tab}`).classList.remove('hidden');
       document.getElementById(`workTab-${tab}`).classList.add('active');
       renderWorkHub();
+      if (tab === 'activitymap') setTimeout(() => renderActivityMap(), 50);
     }
 
     function renderWorkHub() {
       updateWorkKpis();
       populateRelatedActivityOptions();
       if (activeWorkTab === 'calendar') renderWorkCalendar();
+      if (activeWorkTab === 'activitymap') renderActivityMap();
       if (activeWorkTab === 'activities') renderActivitiesTable();
       if (activeWorkTab === 'personal') renderTaskCards('Personal');
       if (activeWorkTab === 'team') renderTaskCards('Team');
@@ -2084,6 +2107,127 @@ USER QUESTION: ${txt}`;
         if (date) add(dateKey(date), { kind: 'note', id: note.ID, title: note.Title, category: 'Deadline' });
       });
       return events;
+    }
+
+    function renderActivityMap() {
+      const container = document.getElementById('activityMap');
+      if (!container || document.getElementById('workPanel-activitymap').classList.contains('hidden')) return;
+      const anchorInput = document.getElementById('activityMapDateAnchor');
+      if (!anchorInput.value) anchorInput.value = dateKey(new Date());
+      const filtered = WORK_ACTIVITIES.filter(matchesWorkFilters).filter(activityMatchesMapPeriod).sort((a, b) => String(a.Start_Date || '').localeCompare(String(b.Start_Date || '')));
+      const mapped = filtered.filter(activityHasCoordinates);
+      const unmapped = filtered.length - mapped.length;
+      const mappedOverall = WORK_ACTIVITIES.filter(activityHasCoordinates).length;
+      if (!activityMap) {
+        activityMap = L.map('activityMap', { zoomControl: true }).setView([17.35, 121.05], 8);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(activityMap);
+        activityMapCluster = typeof L.markerClusterGroup === 'function' ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 42, spiderfyOnMaxZoom: true }) : L.layerGroup();
+        activityMap.addLayer(activityMapCluster);
+      }
+      activityMapCluster.clearLayers();
+      activityMapMarkers = [];
+      mapped.forEach(activity => {
+        const latitude = Number(activity.Latitude);
+        const longitude = Number(activity.Longitude);
+        const category = activity.Category || inferClientScheduleCategory(activity.Type, activity.Title);
+        const color = activityMapCategoryColor(category);
+        const popup = `<div style="min-width:220px"><div style="font-weight:900;font-size:13px">${escapeHtml(activity.Title)}</div><div style="font-size:10px;color:#64748b;margin-top:3px">${escapeHtml(category)} · ${escapeHtml(activity.Status || 'Planned')}</div><div style="font-size:11px;margin-top:8px"><b>${formatWorkDate(activity.Start_Date)}</b>${activity.End_Date && activity.End_Date !== activity.Start_Date ? ' to ' + formatWorkDate(activity.End_Date) : ''}</div><div style="font-size:11px;margin-top:4px">${escapeHtml(activity.Venue || activity.Municipality_Province || 'Location')}</div><button onclick="editActivityById('${escapeAttr(activity.ID)}')" style="margin-top:9px;background:#003399;color:white;border:0;border-radius:7px;padding:5px 10px;font-size:10px;font-weight:800">View activity</button></div>`;
+        const marker = L.circleMarker([latitude, longitude], { radius: 8, fillColor: color, color: '#ffffff', weight: 2, fillOpacity: 0.95 }).bindPopup(popup);
+        marker._activityId = activity.ID;
+        activityMapMarkers.push(marker);
+        activityMapCluster.addLayer(marker);
+      });
+      setTimeout(() => activityMap.invalidateSize(), 50);
+      if (activityMapMarkers.length > 1) activityMap.fitBounds(L.featureGroup(activityMapMarkers).getBounds().pad(0.14), { maxZoom: 12 });
+      else if (activityMapMarkers.length === 1) activityMap.setView(activityMapMarkers[0].getLatLng(), 12);
+      else activityMap.setView([17.35, 121.05], 8);
+      document.getElementById('activityMapPinCount').innerText = `${mapped.length} pin${mapped.length === 1 ? '' : 's'}`;
+      const status = document.getElementById('activityMapSyncStatus');
+      if (!ACTIVITY_MAP_SYNCING) status.innerText = unmapped ? `${mappedOverall} mapped overall; ${unmapped} in this date range still need location sync.` : `${mapped.length} filtered schedule${mapped.length === 1 ? '' : 's'} mapped.`;
+      const list = document.getElementById('activityMapList');
+      list.innerHTML = mapped.length ? mapped.map(activity => {
+        const category = activity.Category || inferClientScheduleCategory(activity.Type, activity.Title);
+        return `<button onclick="focusActivityMapMarker('${escapeAttr(activity.ID)}')" class="w-full text-left rounded-xl border dark:border-slate-700 bg-white dark:bg-slate-900 p-3 hover:border-blue-400 hover:shadow-sm transition"><div class="flex items-start gap-2"><span class="mt-1 w-2.5 h-2.5 rounded-full shrink-0" style="background:${activityMapCategoryColor(category)}"></span><div class="min-w-0"><div class="text-[10px] font-black truncate">${escapeHtml(activity.Title)}</div><div class="text-[9px] text-slate-400 mt-1">${formatWorkDate(activity.Start_Date)} · ${escapeHtml(activity.Municipality_Province || activity.Venue || '')}</div></div></div></button>`;
+      }).join('') : '<div class="py-12 text-center text-[10px] text-slate-400"><i class="fa-solid fa-location-dot text-2xl mb-3 block"></i>No mapped activities match this date range and filters.</div>';
+    }
+
+    function activityMatchesMapPeriod(activity) {
+      const period = document.getElementById('activityMapPeriodFilter').value;
+      if (period === 'all') return true;
+      const anchor = parseLocalDate(document.getElementById('activityMapDateAnchor').value) || startOfLocalDay(new Date());
+      let rangeStart;
+      let rangeEnd;
+      if (period === 'week') {
+        const mondayOffset = (anchor.getDay() + 6) % 7;
+        rangeStart = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - mondayOffset);
+        rangeEnd = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate() + 6);
+      } else if (period === 'year') {
+        rangeStart = new Date(anchor.getFullYear(), 0, 1);
+        rangeEnd = new Date(anchor.getFullYear(), 11, 31);
+      } else {
+        rangeStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+        rangeEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+      }
+      const start = parseLocalDate(activity.Start_Date);
+      const end = parseLocalDate(activity.End_Date || activity.Start_Date) || start;
+      return Boolean(start && end && end >= rangeStart && start <= rangeEnd);
+    }
+
+    function activityHasCoordinates(activity) {
+      return Number.isFinite(Number(activity.Latitude)) && Number.isFinite(Number(activity.Longitude)) && String(activity.Latitude) !== '' && String(activity.Longitude) !== '';
+    }
+
+    function activityMapCategoryColor(category) {
+      const value = String(category || '').toLowerCase();
+      if (value === 'training') return '#f97316';
+      if (value === 'event') return '#ec4899';
+      if (value === 'meeting') return '#06b6d4';
+      if (value === 'deadline') return '#ef4444';
+      if (value === 'activity') return '#10b981';
+      return '#64748b';
+    }
+
+    function focusActivityMapMarker(id) {
+      const marker = activityMapMarkers.find(item => item._activityId === id);
+      if (!marker || !activityMap) return;
+      const reveal = () => {
+        activityMap.setView(marker.getLatLng(), Math.max(activityMap.getZoom(), 12));
+        marker.openPopup();
+      };
+      if (typeof activityMapCluster.zoomToShowLayer === 'function') activityMapCluster.zoomToShowLayer(marker, reveal); else reveal();
+    }
+
+    function getActivityMapPriorityIds() {
+      const anchor = document.getElementById('activityMapDateAnchor');
+      if (anchor && !anchor.value) anchor.value = dateKey(new Date());
+      return WORK_ACTIVITIES.filter(matchesWorkFilters).filter(activityMatchesMapPeriod).filter(activity => !activityHasCoordinates(activity)).map(activity => activity.ID).filter(Boolean).slice(0, 30);
+    }
+
+    async function syncActivityMapLocations(force = false, pass = 0) {
+      if (ACTIVITY_MAP_SYNCING || WORK_NEEDS_SETUP || !WORK_LOADED) return;
+      ACTIVITY_MAP_SYNCING = true;
+      const button = document.getElementById('btnSyncActivityMap');
+      const status = document.getElementById('activityMapSyncStatus');
+      if (button) { button.disabled = true; button.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i>Syncing'; }
+      if (status) status.innerText = force ? 'Rechecking unresolved and changed locations…' : 'Checking new or changed activity locations…';
+      try {
+        const priorityIds = getActivityMapPriorityIds();
+        const result = await apiRequest('syncActivityMap', { limit: force ? 15 : 6, force, ids: priorityIds });
+        const sync = result.sync || {};
+        (sync.records || []).forEach(record => {
+          const index = WORK_ACTIVITIES.findIndex(item => item.ID === record.ID);
+          if (index >= 0) WORK_ACTIVITIES[index] = record; else WORK_ACTIVITIES.push(record);
+        });
+        if (status) status.innerText = sync.processed ? `Checked ${sync.processed}; ${sync.updated} mapped${priorityIds.length ? ' from the selected date range first' : ''}${sync.remaining ? `; ${sync.remaining} queued` : ''}.` : 'All activity locations are synchronized.';
+        if (activeWorkTab === 'activitymap') renderActivityMap();
+        if (!force && sync.remaining > 0 && pass < 2) setTimeout(() => syncActivityMapLocations(false, pass + 1), 4500);
+      } catch (error) {
+        if (status) status.innerText = 'Location sync paused: ' + error.message;
+        if (force) alert('Activity location sync failed: ' + error.message);
+      } finally {
+        ACTIVITY_MAP_SYNCING = false;
+        if (button) { button.disabled = false; button.innerHTML = '<i class="fa-solid fa-rotate mr-1"></i>Sync locations'; }
+      }
     }
 
     function changeCalendarMonth(offset) {
