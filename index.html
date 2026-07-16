@@ -7,12 +7,13 @@
   <link rel="icon" type="image/png" href="https://files.e.gov.ph/elgu/9c1a30c1-fd98-4bff-9548-01024c0efd8c.png">
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -123,6 +124,15 @@
     .column-toggle-menu { box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12); }
     #mapProvPanel.collapsed-panel #mapProvPanelBody { display: none; }
     #mapProvPanel.collapsed-panel #mapProvPanelChevron { transform: rotate(180deg); }
+    .work-tab.active { background: #003399; color: white; border-color: #003399; }
+    .dark .work-tab.active { background: #3b82f6; border-color: #3b82f6; }
+    .calendar-day { min-height: 112px; }
+    .calendar-day.is-today { box-shadow: inset 0 0 0 2px #3b82f6; }
+    .calendar-event { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    @media (max-width: 767px) {
+      .calendar-day { min-height: 82px; }
+      .calendar-event { font-size: 8px; padding: 2px 4px; }
+    }
 
   </style>
 </head>
@@ -158,7 +168,7 @@
       <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-2">Update Required</h2>
       <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">A newer version is available.</p>
       <a id="downloadLink" href="#" target="_blank" class="block w-full bg-dict-blue hover:bg-blue-700 text-white font-black text-sm py-4 rounded-xl shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.02] active:scale-[0.98] mb-4">DOWNLOAD LATEST VERSION</a>
-      <p class="text-[10px] text-slate-400 font-mono">Current: v1.10 <span class="mx-2">•</span> <span id="remoteVersionDisplay">Checking...</span></p>
+      <p class="text-[10px] text-slate-400 font-mono">Current: v3.0 <span class="mx-2">•</span> <span id="remoteVersionDisplay">Checking...</span></p>
     </div>
   </div>
 
@@ -180,7 +190,7 @@
       <img id="logoElgu" src="https://files.e.gov.ph/elgu/9c1a30c1-fd98-4bff-9548-01024c0efd8c.png" class="h-8 w-auto">
       <div class="ml-2">
         <h1 class="text-xl font-black text-dict-blue dark:text-blue-400 leading-tight tracking-tighter">eLGU Monitoring System</h1>
-        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">v1.10</p>
+        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">v3.0</p>
       </div>
     </div>
     <div class="flex items-center gap-3">
@@ -191,6 +201,7 @@
       <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
       <button onclick="switchTab('dash')" id="btn-dash" class="nav-tab active bg-dict-blue text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">Dashboard</button>
       <button onclick="switchTab('map')" id="btn-map" class="nav-tab bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition">Map</button>
+      <button onclick="switchTab('work')" id="btn-work" class="nav-tab bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition flex gap-2 items-center"><i class="fa-solid fa-calendar-check"></i> Work Hub</button>
       <button onclick="switchTab('ai')" id="btn-ai" class="nav-tab bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md hover:from-violet-500 hover:to-indigo-500 transition flex gap-2 items-center"><i class="fa-solid fa-sparkles"></i> AI Analyst</button>
       <button onclick="switchTab('logs')" id="btn-logs" class="nav-tab bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition flex gap-2 items-center"><i class="fa-solid fa-list-check"></i> Logs</button>
       <div id="userBadge" class="hidden items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-3 py-1.5 rounded-full text-[10px] font-bold text-green-700 dark:text-green-300"><i class="fa-solid fa-circle-user"></i><span id="userEmail">—</span></div>
@@ -214,6 +225,7 @@
               <button onclick="switchTab('ai'); toggleDrawer()" class="col-span-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-sparkles"></i> Open AI Analyst</button>
               <button onclick="switchTab('dash'); toggleDrawer()" class="bg-blue-50 dark:bg-blue-900/20 text-dict-blue dark:text-blue-400 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-chart-pie"></i> Dashboard</button>
               <button onclick="switchTab('map'); toggleDrawer()" class="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs border dark:border-slate-700 flex items-center justify-center gap-2"><i class="fa-solid fa-map"></i> Map</button>
+              <button onclick="switchTab('work'); toggleDrawer()" class="col-span-2 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs border dark:border-slate-700 flex items-center justify-center gap-2"><i class="fa-solid fa-calendar-check"></i> Activities, Calendar & Tasks</button>
               <button onclick="switchTab('logs'); toggleDrawer()" class="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs border dark:border-slate-700 flex items-center justify-center gap-2"><i class="fa-solid fa-list-check"></i> Logs</button>
               <button onclick="toggleTheme()" class="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs border dark:border-slate-700 flex items-center justify-center gap-2"><i class="fa-solid fa-circle-half-stroke"></i> Theme</button>
               <button onclick="toggleSettings(); toggleDrawer()" class="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs border dark:border-slate-700 flex items-center justify-center gap-2"><i class="fa-solid fa-gear"></i> Settings</button>
@@ -372,6 +384,87 @@
       </div>
     </main>
 
+    <main id="view-work" class="view-section hidden flex-1 bg-transparent p-4 md:p-8 overflow-y-auto pb-24">
+      <div class="max-w-7xl mx-auto w-full">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+          <div>
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-900/30 text-dict-blue dark:text-blue-400 flex items-center justify-center"><i class="fa-solid fa-calendar-check text-xl"></i></div>
+              <div><h2 class="text-2xl font-black text-slate-800 dark:text-white">Work Hub</h2><p class="text-xs text-slate-500">Activities, schedules, personal tasks and team delivery in one place.</p></div>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="loadWorkData(true)" class="px-4 py-2 rounded-xl border bg-white/80 dark:bg-slate-800/80 text-xs font-black text-slate-600 dark:text-slate-300 hover:border-blue-400 transition"><i class="fa-solid fa-rotate-right mr-2"></i>Refresh</button>
+            <button onclick="openActivityModal()" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 transition"><i class="fa-solid fa-plus mr-2"></i>Activity</button>
+            <button onclick="openTaskModal('Personal')" class="px-4 py-2 rounded-xl bg-dict-blue text-white text-xs font-black hover:bg-blue-700 transition"><i class="fa-solid fa-plus mr-2"></i>My Task</button>
+            <button onclick="openTaskModal('Team')" class="px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-black hover:bg-violet-700 transition"><i class="fa-solid fa-plus mr-2"></i>Team Task</button>
+            <button onclick="openDocumentModal()" class="px-4 py-2 rounded-xl bg-cyan-700 text-white text-xs font-black hover:bg-cyan-800 transition"><i class="fa-solid fa-file-circle-plus mr-2"></i>Document</button>
+            <button onclick="openNoteModal()" class="px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-black hover:bg-amber-700 transition"><i class="fa-solid fa-note-sticky mr-2"></i>Note</button>
+          </div>
+        </div>
+
+        <div id="workSetupBanner" class="hidden mb-6 p-5 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div><div class="text-sm font-black text-amber-800 dark:text-amber-200">Work database needs to be initialized</div><p class="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1">This creates clean DB tabs and safely copies recognizable rows from your existing activity sheets. Original sheets are not changed.</p></div>
+          <button id="btnSetupWork" onclick="setupWorkDatabase()" class="shrink-0 bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl text-xs font-black"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Initialize & Import</button>
+        </div>
+        <div id="workLocalNotice" class="hidden mb-6 px-4 py-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-xs text-blue-700 dark:text-blue-300 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div id="workLocalNoticeText"><i class="fa-solid fa-flask mr-2"></i><b>Local test mode:</b> Work Hub changes are saved only in this browser and are not sent to Google Sheets.</div>
+          <button id="workLocalSyncButton" onclick="enableLocalSheetSync()" class="shrink-0 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Connect Google Sheets</button>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+          <div class="glass-panel p-4 border-l-4 border-emerald-500"><div class="text-[10px] uppercase font-black text-slate-400">Upcoming activities</div><div id="workKpiActivities" class="text-2xl font-black mt-1">0</div></div>
+          <div class="glass-panel p-4 border-l-4 border-blue-500"><div class="text-[10px] uppercase font-black text-slate-400">Open personal tasks</div><div id="workKpiPersonal" class="text-2xl font-black mt-1">0</div></div>
+          <div class="glass-panel p-4 border-l-4 border-violet-500"><div class="text-[10px] uppercase font-black text-slate-400">Open team tasks</div><div id="workKpiTeam" class="text-2xl font-black mt-1">0</div></div>
+          <div class="glass-panel p-4 border-l-4 border-red-500"><div class="text-[10px] uppercase font-black text-slate-400">Overdue tasks / subtasks</div><div id="workKpiOverdue" class="text-2xl font-black mt-1 text-red-600">0</div></div>
+          <div class="glass-panel p-4 border-l-4 border-cyan-500"><div class="text-[10px] uppercase font-black text-slate-400">Pending documents</div><div id="workKpiDocuments" class="text-2xl font-black mt-1">0</div></div>
+          <div class="glass-panel p-4 border-l-4 border-amber-500"><div class="text-[10px] uppercase font-black text-slate-400">Open notes</div><div id="workKpiNotes" class="text-2xl font-black mt-1">0</div></div>
+        </div>
+
+        <div class="glass-panel overflow-hidden">
+          <div class="p-3 border-b dark:border-slate-800 flex flex-col lg:flex-row gap-3 lg:items-center bg-white/50 dark:bg-slate-900/50">
+            <div class="flex gap-2 overflow-x-auto">
+              <button id="workTab-calendar" onclick="switchWorkTab('calendar')" class="work-tab active px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-regular fa-calendar mr-2"></i>Calendar</button>
+              <button id="workTab-activities" onclick="switchWorkTab('activities')" class="work-tab px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-person-running mr-2"></i>Activities</button>
+              <button id="workTab-personal" onclick="switchWorkTab('personal')" class="work-tab px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-user-check mr-2"></i>My Tasks</button>
+              <button id="workTab-team" onclick="switchWorkTab('team')" class="work-tab px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-people-group mr-2"></i>Team Tasks</button>
+              <button id="workTab-documents" onclick="switchWorkTab('documents')" class="work-tab px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-folder-open mr-2"></i>Documents</button>
+              <button id="workTab-notes" onclick="switchWorkTab('notes')" class="work-tab px-4 py-2 rounded-lg border text-xs font-black whitespace-nowrap"><i class="fa-solid fa-note-sticky mr-2"></i>Notes</button>
+            </div>
+            <div class="lg:ml-auto flex gap-2">
+              <select id="workCategoryFilter" onchange="renderWorkHub()" class="text-xs border rounded-lg px-3 py-2 bg-white/80 dark:bg-slate-800/80 outline-none">
+                <option value="All">All categories</option><option>Activity</option><option>Training</option><option>Event</option><option>Meeting</option><option>Deadline</option><option>Other</option>
+              </select>
+              <select id="workStatusFilter" onchange="renderWorkHub()" class="text-xs border rounded-lg px-3 py-2 bg-white/80 dark:bg-slate-800/80 outline-none">
+                <option value="All">All statuses</option><option>Planned</option><option>Ongoing</option><option>Completed</option><option>Cancelled</option><option>To Do</option><option>In Progress</option><option>Blocked</option><option>Done</option><option>Draft</option><option>For Review</option><option>Open</option><option>Resolved</option><option>Archived</option>
+              </select>
+              <input id="workSearch" oninput="renderWorkHub()" type="search" placeholder="Search work..." class="min-w-0 w-full lg:w-56 text-xs border rounded-lg px-3 py-2 bg-white/80 dark:bg-slate-800/80 outline-none focus:ring-1 ring-blue-500">
+            </div>
+          </div>
+
+          <section id="workPanel-calendar" class="work-panel p-4 md:p-6">
+            <div class="flex items-center justify-between mb-4">
+              <button onclick="changeCalendarMonth(-1)" class="w-9 h-9 rounded-lg border bg-white dark:bg-slate-800"><i class="fa-solid fa-chevron-left"></i></button>
+              <div class="text-center"><h3 id="calendarMonthLabel" class="text-lg font-black"></h3><button onclick="goCalendarToday()" class="text-[10px] font-black text-blue-600 uppercase">Today</button></div>
+              <button onclick="changeCalendarMonth(1)" class="w-9 h-9 rounded-lg border bg-white dark:bg-slate-800"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="grid grid-cols-7 text-center text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+            <div id="calendarGrid" class="grid grid-cols-7 border-l border-t border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"></div>
+            <div class="flex flex-wrap gap-4 mt-4 text-[10px] font-bold text-slate-500"><span><i class="fa-solid fa-circle text-emerald-500 mr-1"></i>Activity</span><span><i class="fa-solid fa-circle text-orange-500 mr-1"></i>Training</span><span><i class="fa-solid fa-circle text-pink-500 mr-1"></i>Event</span><span><i class="fa-solid fa-circle text-cyan-500 mr-1"></i>Meeting</span><span><i class="fa-solid fa-circle text-blue-500 mr-1"></i>Personal task</span><span><i class="fa-solid fa-circle text-violet-500 mr-1"></i>Team task</span><span><i class="fa-solid fa-circle text-amber-500 mr-1"></i>Subtask due</span></div>
+          </section>
+
+          <section id="workPanel-activities" class="work-panel hidden">
+            <div class="overflow-x-auto"><table class="w-full text-left"><thead class="text-[10px] uppercase font-black text-slate-400 bg-slate-50/60 dark:bg-slate-900/60"><tr><th class="px-5 py-4">Date</th><th class="px-5 py-4">Schedule</th><th class="px-5 py-4">Category / type</th><th class="px-5 py-4">Location / mode</th><th class="px-5 py-4">Status</th><th class="px-5 py-4 text-right">Actions</th></tr></thead><tbody id="activitiesTableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody></table></div>
+          </section>
+
+          <section id="workPanel-personal" class="work-panel hidden"><div id="personalTaskGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 md:p-6"></div></section>
+          <section id="workPanel-team" class="work-panel hidden"><div id="teamTaskGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 md:p-6"></div></section>
+          <section id="workPanel-documents" class="work-panel hidden"><div class="overflow-x-auto"><table class="w-full text-left"><thead class="text-[10px] uppercase font-black text-slate-400 bg-slate-50/60 dark:bg-slate-900/60"><tr><th class="px-5 py-4">Document</th><th class="px-5 py-4">Category / period</th><th class="px-5 py-4">Status</th><th class="px-5 py-4">Files</th><th class="px-5 py-4 text-right">Actions</th></tr></thead><tbody id="documentsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody></table></div></section>
+          <section id="workPanel-notes" class="work-panel hidden"><div id="notesGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 md:p-6"></div></section>
+        </div>
+      </div>
+    </main>
+
     <main id="view-ai" class="view-section hidden flex-1 flex flex-col p-2 md:p-8 bg-transparent overflow-hidden h-full">
       <div class="max-w-4xl mx-auto w-full h-full flex flex-col">
         <div class="bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl flex-1 shadow-sm overflow-hidden flex flex-col">
@@ -438,6 +531,95 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <div id="modalActivity" class="fixed inset-0 z-[140] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm modal p-4">
+    <form onsubmit="saveActivity(event)" class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div class="p-5 border-b dark:border-slate-800 flex items-center justify-between"><div><h3 id="activityModalTitle" class="text-lg font-black">New Activity</h3><p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Stored in DB_Activities</p></div><button type="button" onclick="closeModal('modalActivity')"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+      <div class="p-5 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="hidden" id="activityId">
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Activity title *</span><input id="activityTitle" required maxlength="500" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Start date *</span><input id="activityStart" type="date" required class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">End date *</span><input id="activityEnd" type="date" required class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Calendar category *</span><select id="activityCategory" required class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option>Activity</option><option>Training</option><option>Event</option><option>Meeting</option><option>Deadline</option><option>Other</option></select></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Detailed type</span><input id="activityType" list="activityTypeOptions" placeholder="Training / Orientation" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><datalist id="activityTypeOptions"><option>Training/Orientation</option><option>Technical Assistance</option><option>Meeting</option><option>Engagement</option><option>Workshop</option><option>Assessment</option></datalist></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</span><select id="activityStatus" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option>Planned</option><option>Ongoing</option><option>Completed</option><option>Cancelled</option></select></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Quarter</span><select id="activityQuarter" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option value=""></option><option>1st Qtr</option><option>2nd Qtr</option><option>3rd Qtr</option><option>4th Qtr</option></select></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Reporting month</span><input id="activityMonth" placeholder="May" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Municipality, Province</span><input id="activityLocation" placeholder="Bangued, Abra" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Mode</span><select id="activityMode" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option value=""></option><option>F2F</option><option>Online</option><option>Hybrid</option></select></label>
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Exact venue / meeting link</span><input id="activityVenue" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Owner email</span><input id="activityOwner" type="email" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Participants</span><input id="activityParticipants" placeholder="Names or count" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Notes</span><textarea id="activityNotes" rows="3" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></textarea></label>
+        <div id="activitySourceNote" class="hidden md:col-span-2 text-[10px] text-slate-400 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2"></div>
+      </div>
+      <div class="p-5 border-t dark:border-slate-800 flex justify-end gap-3"><button type="button" onclick="closeModal('modalActivity')" class="px-5 py-2 text-xs font-black text-slate-500">Cancel</button><button id="btnSaveActivity" type="submit" class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700">Save Activity</button></div>
+    </form>
+  </div>
+
+  <div id="modalDocument" class="fixed inset-0 z-[140] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm modal p-4">
+    <form onsubmit="saveDocument(event)" class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div class="p-5 border-b dark:border-slate-800 flex items-center justify-between"><div><h3 id="documentModalTitle" class="text-lg font-black">New Document</h3><p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Stored in DB_Documents</p></div><button type="button" onclick="closeModal('modalDocument')"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+      <div class="p-5 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="hidden" id="documentId">
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Document title *</span><input id="documentTitle" required maxlength="500" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Document type</span><input id="documentType" list="documentTypeOptions" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><datalist id="documentTypeOptions"><option>Presentation</option><option>Memorandum</option><option>Activity Design</option><option>Cash Flow Program</option><option>Terms of Reference</option><option>Procurement</option><option>Document</option></datalist></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Category</span><input id="documentCategory" placeholder="2026 Funds" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Period</span><input id="documentPeriod" placeholder="1st Sem" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</span><select id="documentStatus" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option>Draft</option><option>For Review</option><option>Completed</option><option>Archived</option></select></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Event date</span><input id="documentEventDate" type="date" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Venue / context</span><input id="documentVenue" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Draft / working file URL</span><input id="documentDraftLink" type="url" placeholder="https://drive.google.com/..." class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Final / signed file URL</span><input id="documentFinalLink" type="url" placeholder="https://drive.google.com/..." class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Notes</span><textarea id="documentNotes" rows="3" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></textarea></label>
+      </div>
+      <div class="p-5 border-t dark:border-slate-800 flex justify-end gap-3"><button type="button" onclick="closeModal('modalDocument')" class="px-5 py-2 text-xs font-black text-slate-500">Cancel</button><button type="submit" class="px-6 py-2.5 rounded-xl bg-cyan-700 text-white text-xs font-black">Save Document</button></div>
+    </form>
+  </div>
+
+  <div id="modalNote" class="fixed inset-0 z-[140] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm modal p-4">
+    <form onsubmit="saveNote(event)" class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div class="p-5 border-b dark:border-slate-800 flex items-center justify-between"><div><h3 id="noteModalTitle" class="text-lg font-black">New Note</h3><p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Stored in DB_Notes</p></div><button type="button" onclick="closeModal('modalNote')"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+      <div class="p-5 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="hidden" id="noteId">
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Note title *</span><input id="noteTitle" required maxlength="300" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Note *</span><textarea id="noteBody" required rows="5" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></textarea></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Category</span><input id="noteCategory" placeholder="Funds Review" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</span><select id="noteStatus" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option>Open</option><option>In Progress</option><option>Resolved</option><option>Archived</option></select></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Priority</span><select id="notePriority" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Due date</span><input id="noteDueDate" type="date" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Related document</span><select id="noteDocumentId" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option value="">None</option></select></label>
+      </div>
+      <div class="p-5 border-t dark:border-slate-800 flex justify-end gap-3"><button type="button" onclick="closeModal('modalNote')" class="px-5 py-2 text-xs font-black text-slate-500">Cancel</button><button type="submit" class="px-6 py-2.5 rounded-xl bg-amber-600 text-white text-xs font-black">Save Note</button></div>
+    </form>
+  </div>
+
+  <div id="modalTask" class="fixed inset-0 z-[140] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm modal p-4">
+    <form onsubmit="saveTask(event)" class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div class="p-5 border-b dark:border-slate-800 flex items-center justify-between"><div><h3 id="taskModalTitle" class="text-lg font-black">New Task</h3><p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Stored in DB_Tasks</p></div><button type="button" onclick="closeModal('modalTask')"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+      <div class="p-5 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="hidden" id="taskId">
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Task type *</span><select id="taskType" required onchange="syncTaskAssigneeDefaults()" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option>Personal</option><option>Team</option></select></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Status</span><select id="taskStatus" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option>To Do</option><option>In Progress</option><option>Blocked</option><option>Done</option></select></label>
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Task title *</span><input id="taskTitle" required maxlength="500" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500"></label>
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Description</span><textarea id="taskDescription" rows="3" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></textarea></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Planned start date</span><input id="taskStart" type="date" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Due date</span><input id="taskDue" type="date" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Actually started</span><input id="taskStartedAt" type="date" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Completed</span><input id="taskCompletedAt" type="date" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <div class="md:col-span-2 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shrink-0">
+          <div class="px-4 py-3 bg-violet-50/70 dark:bg-slate-800 flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700"><div><div class="text-xs font-black"><i class="fa-solid fa-list-check text-violet-600 mr-2"></i>Subtasks <span id="taskSubtaskCount" class="ml-1 text-[9px] text-slate-400">0</span></div><div class="text-[9px] text-slate-400 mt-0.5">Each subtask can have its own status, dates and assignee.</div></div><button type="button" onclick="addTaskDraftSubtask()" class="shrink-0 px-3 py-2 rounded-lg bg-violet-600 text-white text-[10px] font-black"><i class="fa-solid fa-plus mr-1"></i>Add</button></div>
+          <div id="taskSubtaskList" class="p-3 space-y-3 bg-slate-50/40 dark:bg-slate-950/20"></div>
+        </div>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Priority</span><select id="taskPriority" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Team</span><input id="taskTeam" placeholder="eLGU CAR" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Assignee name</span><input id="taskAssigneeName" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Assignee email</span><input id="taskAssigneeEmail" type="email" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"></label>
+        <label class="md:col-span-2"><span class="block text-[10px] font-black uppercase text-slate-500 mb-1">Related activity</span><select id="taskRelatedActivity" class="w-full text-sm border rounded-xl px-3 py-2.5 bg-white dark:bg-slate-800"><option value="">None</option></select></label>
+      </div>
+      <div class="p-5 border-t dark:border-slate-800 flex justify-end gap-3"><button type="button" onclick="closeModal('modalTask')" class="px-5 py-2 text-xs font-black text-slate-500">Cancel</button><button id="btnSaveTask" type="submit" class="px-6 py-2.5 rounded-xl bg-dict-blue text-white text-xs font-black hover:bg-blue-700">Save Task</button></div>
+    </form>
   </div>
 
   <div id="modalChart" class="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 backdrop-blur-md modal p-4">
@@ -536,10 +718,20 @@
 
  <script>
     const DOWNLOAD_URL = "https://drive.google.com/drive/folders/1qA2OZqQSDru05aIzgFPhCGicESXp22u1"; 
-    const CURRENT_VERSION = "1.10"; 
+    const CURRENT_VERSION = "3.0"; 
+    const LOCAL_AUTH_BYPASS = location.protocol === 'file:' || ['localhost', '127.0.0.1'].includes(location.hostname);
+    const LOCAL_WORK_DB_KEY = 'elgu_local_work_db_v2';
     
     let LIVE_DB = [], CURRENT_VIEW_DB = [], API_URL = '';
     let CURRENT_USER = null;
+    let CURRENT_TOKEN = '';
+    let LOCAL_SYNC_KEY = '';
+    let LOCAL_CONNECTION_KEY = '';
+    try { LOCAL_SYNC_KEY = LOCAL_AUTH_BYPASS ? (localStorage.getItem('elgu_local_sync_key') || sessionStorage.getItem('elgu_local_sync_key') || '') : ''; } catch (error) {}
+    try { LOCAL_CONNECTION_KEY = LOCAL_AUTH_BYPASS ? (localStorage.getItem('elgu_local_connection_key') || sessionStorage.getItem('elgu_local_connection_key') || '') : ''; } catch (error) {}
+    let REFRESH_TIMER = null;
+    let WORK_ACTIVITIES = [], WORK_TASKS = [], WORK_SUBTASKS = [], WORK_DOCUMENTS = [], WORK_NOTES = [], TASK_DRAFT_SUBTASKS = [], WORK_LOADED = false, WORK_NEEDS_SETUP = false;
+    let activeWorkTab = 'calendar', calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     let activeFilter = 'All', map = null, markers = [];
     let chartInstPie = null, chartInstBar = null, chartInstYear = null, chartModalInst = null;
     let compareState = null, snapshotMode = false;
@@ -653,11 +845,18 @@
         showAppAfterLogin({ email: parseJwt(token).email, name: parseJwt(token).name }, token, false);
         return;
       }
+      if (!isAllowedAppsScriptUrl(storedUrl)) {
+        localStorage.removeItem('elgu_api_url');
+        showAppAfterLogin({ email: parseJwt(token).email, name: parseJwt(token).name }, token, false);
+        toggleSettings();
+        alert('The saved endpoint was rejected. Enter a deployed Google Apps Script /exec URL.');
+        return;
+      }
       showLoading('Verifying...');
       fetch(storedUrl, {
         method: 'POST',
         body: JSON.stringify({ action: 'verifyToken', token: token, appId: 'DICT' })
-      }).then(r => r.json()).then(res => {
+      }).then(r => readJsonResponse(r, 'Apps Script')).then(res => {
         hideLoading();
         if (res.status === 'success') {
           showAppAfterLogin({ email: res.email, name: res.name }, token, true);
@@ -666,18 +865,23 @@
         }
       }).catch(() => {
         hideLoading();
-        // Offline fallback — allow if URL was pre-configured
-        const info = parseJwt(token);
-        showAppAfterLogin({ email: info.email, name: info.name }, token, false);
+        // Do not bypass backend verification when the configured endpoint is unavailable.
+        alert('Sign-in could not be verified by the Apps Script backend. Check the connection and try again.');
       });
     }
 
     function parseJwt(token) {
-      try { return JSON.parse(atob(token.split('.')[1])); } catch (e) { return {}; }
+      try {
+        const base64Url = token.split('.')[1] || '';
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(base64Url.length / 4) * 4, '=');
+        const json = decodeURIComponent(atob(base64).split('').map(char => '%' + ('00' + char.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        return JSON.parse(json);
+      } catch (e) { return {}; }
     }
 
     function showAppAfterLogin(user, token, verified) {
       CURRENT_USER = user;
+      CURRENT_TOKEN = token || '';
       document.getElementById('loginOverlay').classList.add('hidden');
       document.getElementById('appShell').classList.remove('hidden');
       document.getElementById('appShell').classList.add('flex');
@@ -691,7 +895,7 @@
       if (API_URL) {
         initData();
         checkVersion();
-        setInterval(() => { if (!snapshotMode && (!compareState || document.getElementById('compareBanner').classList.contains('hidden'))) fetchLiveData(); }, 30000);
+        startRefreshTimer();
       } else {
         toggleSettings();
       }
@@ -699,6 +903,9 @@
 
     function signOut() {
       CURRENT_USER = null;
+      CURRENT_TOKEN = '';
+      if (REFRESH_TIMER) clearInterval(REFRESH_TIMER);
+      REFRESH_TIMER = null;
       API_URL = '';
       document.getElementById('loginOverlay').classList.remove('hidden');
       document.getElementById('appShell').classList.add('hidden');
@@ -724,17 +931,233 @@
       } catch (e) { return ''; }
     }
 
+    function isAllowedAppsScriptUrl(value) {
+      try {
+        const url = new URL(String(value || '').trim());
+        return url.protocol === 'https:' && url.hostname === 'script.google.com' && /^\/macros\/s\/[^/]+\/exec\/?$/.test(url.pathname);
+      } catch (error) { return false; }
+    }
+
     // --- LOG HELPER ---
     function sendLog(type, detail) {
       if (!API_URL || !CURRENT_USER) return;
+      if (['VIEW', 'VIEW_LOGS', 'NAVIGATION', 'AUTO_REFRESH'].includes(String(type || '').toUpperCase())) return;
       fetch(API_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'logAction', email: CURRENT_USER.email, appId: 'DICT', logType: type, detail: detail })
+        body: JSON.stringify({ action: 'logAction', token: CURRENT_TOKEN, email: CURRENT_USER.email, localDev: LOCAL_AUTH_BYPASS && Boolean(LOCAL_SYNC_KEY), localDevKey: LOCAL_AUTH_BYPASS ? LOCAL_SYNC_KEY : '', appId: 'DICT', logType: type, detail: detail })
       }).catch(() => {});
+    }
+
+    async function apiRequest(action, payload = {}) {
+      if (LOCAL_AUTH_BYPASS && !CURRENT_TOKEN && !LOCAL_SYNC_KEY && ['getWorkData', 'setupDatabase', 'migrateActivities', 'migrateLegacyData', 'saveActivity', 'deleteActivity', 'saveTask', 'deleteTask', 'saveSubtask', 'deleteSubtask', 'saveDocument', 'deleteDocument', 'saveNote', 'deleteNote'].includes(action)) {
+        return localWorkApiRequest(action, payload);
+      }
+      if (!API_URL) throw new Error('Connect the Apps Script URL in Settings first.');
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...payload,
+          action,
+          token: CURRENT_TOKEN,
+          email: CURRENT_USER ? CURRENT_USER.email : '',
+          localDev: LOCAL_AUTH_BYPASS && Boolean(LOCAL_SYNC_KEY),
+          localDevKey: LOCAL_AUTH_BYPASS ? LOCAL_SYNC_KEY : ''
+        })
+      });
+      const result = await readJsonResponse(response, 'Apps Script');
+      if (result && result.status === 'error') throw new Error(result.message || result.answer || 'The request failed.');
+      return result;
+    }
+
+    async function readJsonResponse(response, serviceName = 'Server') {
+      const text = await response.text();
+      let result;
+      try { result = JSON.parse(text); } catch (error) {
+        const receivedHtml = /^\s*<!doctype|^\s*<html/i.test(text);
+        const deploymentHint = receivedHtml
+          ? ' The Apps Script URL returned an HTML page. Use the deployed Web App URL ending in /exec and deploy it as Execute as: Me with the intended access setting.'
+          : '';
+        throw new Error(`${serviceName} returned ${response.status || 'an invalid response'} instead of JSON.${deploymentHint}`);
+      }
+      if (!response.ok) throw new Error((result && (result.message || result.error)) || `${serviceName} returned HTTP ${response.status}.`);
+      return result;
+    }
+
+    function readLocalWorkDatabase() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(LOCAL_WORK_DB_KEY) || '{}');
+        return {
+          initialized: Boolean(saved.initialized),
+          activities: Array.isArray(saved.activities) ? saved.activities : [],
+          tasks: Array.isArray(saved.tasks) ? saved.tasks : [],
+          subtasks: Array.isArray(saved.subtasks) ? saved.subtasks : [],
+          documents: Array.isArray(saved.documents) ? saved.documents : [],
+          notes: Array.isArray(saved.notes) ? saved.notes : []
+        };
+      } catch (error) {
+        return { initialized: false, activities: [], tasks: [], subtasks: [], documents: [], notes: [] };
+      }
+    }
+
+    function writeLocalWorkDatabase(database) {
+      localStorage.setItem(LOCAL_WORK_DB_KEY, JSON.stringify(database));
+    }
+
+    function createLocalRecordId(prefix) {
+      const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+      return `${prefix}-${Date.now().toString(36).toUpperCase()}${random}`;
+    }
+
+    function localWorkApiRequest(action, payload) {
+      const database = readLocalWorkDatabase();
+      const active = records => records.filter(record => !record.Deleted_At);
+      if (action === 'getWorkData') {
+        return Promise.resolve({ status: 'success', needsSetup: !database.initialized, activities: active(database.activities), tasks: active(database.tasks), subtasks: active(database.subtasks), documents: active(database.documents), notes: active(database.notes), localMode: true });
+      }
+      if (action === 'setupDatabase' || action === 'migrateActivities' || action === 'migrateLegacyData') {
+        database.initialized = true;
+        writeLocalWorkDatabase(database);
+        return Promise.resolve({ status: 'success', setup: { created: ['Local DB_Activities', 'Local DB_Tasks', 'Local DB_Subtasks', 'Local DB_Documents', 'Local DB_Notes'], existing: [] }, migration: { imported: 0, sourceSheets: [] }, localMode: true });
+      }
+      const now = new Date().toISOString();
+      if (action === 'saveActivity' || action === 'saveTask' || action === 'saveSubtask' || action === 'saveDocument' || action === 'saveNote') {
+        database.initialized = true;
+        const isActivity = action === 'saveActivity';
+        const isSubtask = action === 'saveSubtask';
+        const isDocument = action === 'saveDocument';
+        const isNote = action === 'saveNote';
+        const collection = isActivity ? database.activities : (isSubtask ? database.subtasks : (isDocument ? database.documents : (isNote ? database.notes : database.tasks)));
+        const input = { ...(payload.record || {}) };
+        const index = collection.findIndex(record => record.ID === input.ID);
+        const existing = index >= 0 ? collection[index] : null;
+        const record = {
+          ...existing,
+          ...input,
+          ID: input.ID || createLocalRecordId(isActivity ? 'ACT' : (isSubtask ? 'SUB' : (isDocument ? 'DOC' : (isNote ? 'NTE' : 'TSK')))),
+          Created_At: existing ? existing.Created_At : now,
+          Created_By: existing ? existing.Created_By : 'localhost@test.local',
+          Updated_At: now,
+          Updated_By: 'localhost@test.local',
+          Deleted_At: '',
+          Deleted_By: ''
+        };
+        if (index >= 0) collection[index] = record; else collection.push(record);
+        writeLocalWorkDatabase(database);
+        return Promise.resolve({ status: 'success', record, localMode: true });
+      }
+      if (action === 'deleteActivity' || action === 'deleteTask' || action === 'deleteSubtask' || action === 'deleteDocument' || action === 'deleteNote') {
+        const collection = action === 'deleteActivity' ? database.activities : (action === 'deleteSubtask' ? database.subtasks : (action === 'deleteDocument' ? database.documents : (action === 'deleteNote' ? database.notes : database.tasks)));
+        const record = collection.find(item => item.ID === payload.id);
+        if (!record) return Promise.reject(new Error('Local record was not found.'));
+        record.Deleted_At = now;
+        record.Deleted_By = 'localhost@test.local';
+        if (action === 'deleteTask') {
+          database.subtasks.filter(item => item.Task_ID === payload.id && !item.Deleted_At).forEach(item => {
+            item.Deleted_At = now;
+            item.Deleted_By = 'localhost@test.local';
+          });
+        }
+        writeLocalWorkDatabase(database);
+        return Promise.resolve({ status: 'success', localMode: true });
+      }
+      return Promise.reject(new Error('Unsupported local Work Hub action: ' + action));
+    }
+
+    function renderLocalSyncNotice(usingBrowserStorage) {
+      const notice = document.getElementById('workLocalNotice');
+      const text = document.getElementById('workLocalNoticeText');
+      const button = document.getElementById('workLocalSyncButton');
+      if (!notice || !LOCAL_AUTH_BYPASS) return;
+      notice.classList.remove('hidden');
+      if (usingBrowserStorage) {
+        text.innerHTML = '<i class="fa-solid fa-flask mr-2"></i><b>Local test mode:</b> Work Hub changes are saved only in this browser and are not sent to Google Sheets.';
+        button.setAttribute('onclick', 'enableLocalSheetSync()');
+        button.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-2"></i>Connect Google Sheets';
+      } else {
+        text.innerHTML = '<i class="fa-solid fa-cloud-check mr-2"></i><b>Google Sheets sync enabled:</b> Work Hub changes are being written to the connected spreadsheet using the Local Dev Sync Key.';
+        button.setAttribute('onclick', 'disableLocalSheetSync()');
+        button.innerHTML = '<i class="fa-solid fa-flask mr-2"></i>Use Browser Storage';
+      }
+    }
+
+    async function enableLocalSheetSync() {
+      if (!LOCAL_AUTH_BYPASS) return;
+      if (!API_URL) {
+        alert('Connect the Apps Script URL in Settings first.');
+        toggleSettings();
+        return;
+      }
+      const settingsKey = document.getElementById('decryptKey') ? document.getElementById('decryptKey').value.trim() : '';
+      const key = LOCAL_CONNECTION_KEY || settingsKey || prompt('Enter the same key used in app settings and configured as LOCAL_DEV_KEY in Apps Script Properties:');
+      if (!key) return;
+      showLoading('Connecting Google Sheets...');
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'verifyLocalDev', localDev: true, localDevKey: key, appId: 'DICT' })
+        });
+        const result = await readJsonResponse(response, 'Apps Script');
+        if (result.status !== 'success') throw new Error(result.message || 'Local sync verification failed.');
+        LOCAL_SYNC_KEY = key;
+        LOCAL_CONNECTION_KEY = key;
+        sessionStorage.setItem('elgu_local_sync_key', key);
+        sessionStorage.setItem('elgu_local_connection_key', key);
+        localStorage.setItem('elgu_local_sync_key', key);
+        localStorage.setItem('elgu_local_connection_key', key);
+
+        const localDatabase = readLocalWorkDatabase();
+        const localActivities = localDatabase.activities.filter(record => !record.Deleted_At);
+        const localTasks = localDatabase.tasks.filter(record => !record.Deleted_At);
+        const localSubtasks = localDatabase.subtasks.filter(record => !record.Deleted_At);
+        const localDocuments = localDatabase.documents.filter(record => !record.Deleted_At);
+        const localNotes = localDatabase.notes.filter(record => !record.Deleted_At);
+        const localCount = localActivities.length + localTasks.length + localSubtasks.length + localDocuments.length + localNotes.length;
+        if (localCount && confirm(`Upload ${localCount} local Work Hub record${localCount === 1 ? '' : 's'} to Google Sheets now?`)) {
+          await apiRequest('setupDatabase');
+          for (const activity of localActivities) await apiRequest('saveActivity', { record: activity });
+          for (const task of localTasks) await apiRequest('saveTask', { record: task });
+          for (const subtask of localSubtasks) await apiRequest('saveSubtask', { record: subtask });
+          for (const documentRecord of localDocuments) await apiRequest('saveDocument', { record: documentRecord });
+          for (const note of localNotes) await apiRequest('saveNote', { record: note });
+          alert(`${localCount} local record${localCount === 1 ? '' : 's'} synced to Google Sheets.`);
+        }
+        WORK_LOADED = false;
+        await loadWorkData(false);
+      } catch (error) {
+        LOCAL_SYNC_KEY = '';
+        LOCAL_CONNECTION_KEY = '';
+        try { sessionStorage.removeItem('elgu_local_sync_key'); sessionStorage.removeItem('elgu_local_connection_key'); } catch (ignore) {}
+        try { localStorage.removeItem('elgu_local_sync_key'); localStorage.removeItem('elgu_local_connection_key'); } catch (ignore) {}
+        alert('Google Sheets sync failed: ' + error.message + '\n\nDeploy the updated Apps Script and configure LOCAL_DEV_KEY first.');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function disableLocalSheetSync() {
+      LOCAL_SYNC_KEY = '';
+      try { sessionStorage.removeItem('elgu_local_sync_key'); } catch (error) {}
+      try { localStorage.removeItem('elgu_local_sync_key'); } catch (error) {}
+      WORK_LOADED = false;
+      await loadWorkData(true);
+    }
+
+    function startRefreshTimer() {
+      if (REFRESH_TIMER) clearInterval(REFRESH_TIMER);
+      REFRESH_TIMER = setInterval(() => {
+        if (!snapshotMode && (!compareState || document.getElementById('compareBanner').classList.contains('hidden'))) fetchLiveData();
+      }, 30000);
     }
 
     window.onload = () => {
       if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+      if (LOCAL_AUTH_BYPASS) {
+        showAppAfterLogin({ email: 'localhost@test.local', name: 'Local Test User' }, '', false);
+        document.getElementById('userEmail').innerText = 'LOCAL TEST';
+        document.getElementById('userBadge').classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+        document.getElementById('userBadge').classList.add('bg-amber-50', 'text-amber-700', 'border-amber-200');
+        document.getElementById('signOutBtn').classList.add('hidden');
+      }
       // Google GSI will call handleGoogleLogin automatically
     };
 
@@ -840,13 +1263,40 @@
       if (!menu.contains(event.target)) closeColumnMenu();
     });
 
-    async function checkVersion() { try { const res = await fetch(`${API_URL}?action=checkVersion`); const json = await res.json(); if (json.version && json.version !== CURRENT_VERSION) { document.getElementById('remoteVersionDisplay').innerText = `New: V${json.version}`; document.getElementById('forceUpdateModal').classList.remove('hidden'); } } catch(e) {} }
+    function compareVersions(a, b) {
+      const left = String(a || '').replace(/^v/i, '').split('.').map(value => parseInt(value, 10) || 0);
+      const right = String(b || '').replace(/^v/i, '').split('.').map(value => parseInt(value, 10) || 0);
+      const length = Math.max(left.length, right.length);
+      for (let index = 0; index < length; index++) {
+        const difference = (left[index] || 0) - (right[index] || 0);
+        if (difference !== 0) return difference > 0 ? 1 : -1;
+      }
+      return 0;
+    }
+
+    async function checkVersion() {
+      if (LOCAL_AUTH_BYPASS || !API_URL) {
+        document.getElementById('forceUpdateModal').classList.add('hidden');
+        return;
+      }
+      try {
+        const response = await fetch(`${API_URL}?action=checkVersion`);
+        const result = await readJsonResponse(response, 'Apps Script');
+        if (result.version && compareVersions(result.version, CURRENT_VERSION) > 0) {
+          document.getElementById('remoteVersionDisplay').innerText = `New: V${result.version}`;
+          document.getElementById('forceUpdateModal').classList.remove('hidden');
+        } else {
+          document.getElementById('forceUpdateModal').classList.add('hidden');
+        }
+      } catch (error) {
+        console.warn('Version check failed:', error);
+      }
+    }
     async function initData() { showLoading(); const p = fetchLiveData(); const t = new Promise((r)=>setTimeout(()=>r('timeout'), 10000)); const res = await Promise.race([p, t]); if (res === 'timeout') { hideLoading(); alert("Timeout"); toggleSettings(); } else { await fetchHistoryList(); hideLoading(); } }
     
     async function fetchLiveData() {
         try {
-            const res = await fetch(`${API_URL}?action=getLive`);
-            LIVE_DB = normalizeData(await res.json());
+            LIVE_DB = normalizeData(await apiRequest('getLive'));
             if (document.getElementById('compareBanner').classList.contains('hidden') && !snapshotMode) {
                 if (activeFilter !== 'All') CURRENT_VIEW_DB = LIVE_DB.filter(x => x.Province === activeFilter);
                 else CURRENT_VIEW_DB = LIVE_DB;
@@ -857,7 +1307,6 @@
                 document.getElementById('statusIndicator').classList.remove('hidden');
                 document.getElementById('statusText').innerText = 'Live';
             }
-            sendLog('VIEW', `Dashboard loaded: ${LIVE_DB.length} LGUs`);
             return 'success';
         } catch (e) { return 'error'; }
     }
@@ -1323,7 +1772,7 @@
 
       const loader = document.createElement('div'); loader.className = "ai-msg chat-bubble"; loader.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Thinking...'; c.appendChild(loader); c.scrollTop = c.scrollHeight;
 
-      // Build structured data context for smarter OpenAI querying
+      // Build structured dashboard context for the Ollama analyst
       const stats = getStatsFrom(CURRENT_VIEW_DB);
       const provBreakdown = {};
       CURRENT_VIEW_DB.forEach(d => {
@@ -1351,22 +1800,828 @@ ${csvData}
 
 USER QUESTION: ${txt}`;
 
-      sendLog('AI_QUERY', txt.substring(0, 200));
-
       try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          body: JSON.stringify({ action: 'askAI', prompt: dataContext, data: dataContext, isDetailed: isDetailed })
+        const json = await apiRequest('askAI', {
+          prompt: dataContext,
+          data: dataContext,
+          question: txt,
+          isDetailed: isDetailed,
+          appId: 'DICT'
         });
-        const json = await res.json();
         loader.remove();
-        const rawHtml = marked.parse(json.answer || "No response.");
+        if (!json.answer) throw new Error('The AI service returned an empty answer.');
+        const rawHtml = DOMPurify.sanitize(marked.parse(json.answer), { USE_PROFILES: { html: true } });
         const aiDiv = document.createElement('div'); aiDiv.className = "ai-msg chat-bubble animate-slide-in relative group";
         aiDiv.innerHTML = rawHtml + `<button onclick="downloadDoc(this.parentNode.innerHTML.split('<button')[0])" class="absolute top-2 right-2 text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition" title="Download as Word"><i class="fa-solid fa-file-word"></i></button>`;
         c.appendChild(aiDiv);
-      } catch (err) { loader.remove(); }
+      } catch (err) {
+        loader.remove();
+        const aiDiv = document.createElement('div');
+        aiDiv.className = "ai-msg chat-bubble animate-slide-in border border-red-200 bg-red-50 text-red-700";
+        aiDiv.innerHTML = `<strong>AI unavailable:</strong> ${escapeHtml(err && err.message ? err.message : 'The request failed. Please try again.')}`;
+        c.appendChild(aiDiv);
+      }
       c.scrollTop = c.scrollHeight;
     }
+
+    // --- WORK HUB: ACTIVITIES, CALENDAR, PERSONAL TASKS & TEAM TASKS ---
+    async function loadWorkData(showSpinner = false) {
+      if (showSpinner) showLoading('Loading Work Hub...');
+      try {
+        const result = await apiRequest('getWorkData');
+        WORK_ACTIVITIES = Array.isArray(result.activities) ? result.activities : [];
+        WORK_TASKS = Array.isArray(result.tasks) ? result.tasks : [];
+        WORK_SUBTASKS = Array.isArray(result.subtasks) ? result.subtasks : [];
+        WORK_DOCUMENTS = Array.isArray(result.documents) ? result.documents : [];
+        WORK_NOTES = Array.isArray(result.notes) ? result.notes : [];
+        WORK_LOADED = true;
+        WORK_NEEDS_SETUP = Boolean(result.needsSetup);
+        document.getElementById('workSetupBanner').classList.toggle('hidden', !result.needsSetup);
+        document.getElementById('workLocalNotice').classList.toggle('hidden', !LOCAL_AUTH_BYPASS);
+        if (LOCAL_AUTH_BYPASS) renderLocalSyncNotice(Boolean(result.localMode));
+        renderWorkHub();
+      } catch (error) {
+        console.error(error);
+        if (LOCAL_AUTH_BYPASS && LOCAL_SYNC_KEY && /local dev|sync key|sign-in session|unauthor/i.test(String(error.message || ''))) {
+          LOCAL_SYNC_KEY = '';
+          try { sessionStorage.removeItem('elgu_local_sync_key'); } catch (ignore) {}
+          try { localStorage.removeItem('elgu_local_sync_key'); } catch (ignore) {}
+          await loadWorkData(false);
+          alert('Google Sheets sync was disconnected: ' + error.message + '\n\nThe Work Hub has returned to browser-only test storage.');
+          return;
+        }
+        WORK_LOADED = false;
+        WORK_NEEDS_SETUP = true;
+        document.getElementById('workSetupBanner').classList.remove('hidden');
+        if (showSpinner || (LOCAL_AUTH_BYPASS && LOCAL_SYNC_KEY)) alert('Could not load the Work Hub: ' + error.message + '\n\nYour saved connection was retained. Check the deployment and try Refresh again.');
+      } finally {
+        if (showSpinner) hideLoading();
+      }
+    }
+
+    async function setupWorkDatabase() {
+      const button = document.getElementById('btnSetupWork');
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Initializing...';
+      try {
+        const result = await apiRequest('setupDatabase');
+        const migration = result.migration || {};
+        const activityCount = migration.activities ? migration.activities.imported || 0 : migration.imported || 0;
+        const trainingCount = migration.training ? migration.training.imported || 0 : 0;
+        const documentCount = migration.documents ? migration.documents.documentsImported || 0 : 0;
+        const noteCount = migration.documents ? migration.documents.notesImported || 0 : 0;
+        await loadWorkData(false);
+        alert(`Work database is ready. Imported ${activityCount} activities, ${trainingCount} training schedules, ${documentCount} documents, and ${noteCount} review notes.`);
+      } catch (error) {
+        alert('Initialization failed: ' + error.message);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Initialize & Import';
+      }
+    }
+
+    function switchWorkTab(tab) {
+      activeWorkTab = tab;
+      const statusFilter = document.getElementById('workStatusFilter');
+      const categoryFilter = document.getElementById('workCategoryFilter');
+      const activityStatuses = ['Planned', 'Ongoing', 'Completed', 'Cancelled'];
+      const taskStatuses = ['To Do', 'In Progress', 'Blocked', 'Done'];
+      if (tab === 'activities' && !['All', ...activityStatuses].includes(statusFilter.value)) statusFilter.value = 'All';
+      if (['personal', 'team'].includes(tab) && !['All', ...taskStatuses].includes(statusFilter.value)) statusFilter.value = 'All';
+      if (tab === 'documents' && !['All', 'Draft', 'For Review', 'Completed', 'Archived'].includes(statusFilter.value)) statusFilter.value = 'All';
+      if (tab === 'notes' && !['All', 'Open', 'In Progress', 'Resolved', 'Archived'].includes(statusFilter.value)) statusFilter.value = 'All';
+      if (['personal', 'team', 'documents', 'notes'].includes(tab)) categoryFilter.value = 'All';
+      document.querySelectorAll('.work-panel').forEach(panel => panel.classList.add('hidden'));
+      document.querySelectorAll('.work-tab').forEach(button => button.classList.remove('active'));
+      document.getElementById(`workPanel-${tab}`).classList.remove('hidden');
+      document.getElementById(`workTab-${tab}`).classList.add('active');
+      renderWorkHub();
+    }
+
+    function renderWorkHub() {
+      updateWorkKpis();
+      populateRelatedActivityOptions();
+      if (activeWorkTab === 'calendar') renderWorkCalendar();
+      if (activeWorkTab === 'activities') renderActivitiesTable();
+      if (activeWorkTab === 'personal') renderTaskCards('Personal');
+      if (activeWorkTab === 'team') renderTaskCards('Team');
+      if (activeWorkTab === 'documents') renderDocumentsTable();
+      if (activeWorkTab === 'notes') renderNotesGrid();
+    }
+
+    function updateWorkKpis() {
+      const today = startOfLocalDay(new Date());
+      const upcoming = WORK_ACTIVITIES.filter(activity => {
+        const end = parseLocalDate(activity.End_Date || activity.Start_Date);
+        return end && end >= today && !['completed', 'cancelled'].includes(String(activity.Status || '').toLowerCase());
+      }).length;
+      const openTasks = WORK_TASKS.filter(task => String(task.Status || '').toLowerCase() !== 'done');
+      const personal = openTasks.filter(task => isPersonalTaskForCurrentUser(task)).length;
+      const team = openTasks.filter(task => String(task.Task_Type || '').toLowerCase() === 'team').length;
+      const overdue = openTasks.filter(task => {
+        const due = parseLocalDate(task.Due_Date);
+        return due && due < today;
+      }).length + WORK_SUBTASKS.filter(subtask => {
+        if (String(subtask.Status || '').toLowerCase() === 'done') return false;
+        const due = parseLocalDate(subtask.Due_Date);
+        return due && due < today;
+      }).length;
+      document.getElementById('workKpiActivities').innerText = upcoming;
+      document.getElementById('workKpiPersonal').innerText = personal;
+      document.getElementById('workKpiTeam').innerText = team;
+      document.getElementById('workKpiOverdue').innerText = overdue;
+      document.getElementById('workKpiDocuments').innerText = WORK_DOCUMENTS.filter(item => !['completed', 'archived'].includes(String(item.Status || '').toLowerCase())).length;
+      document.getElementById('workKpiNotes').innerText = WORK_NOTES.filter(item => !['resolved', 'archived'].includes(String(item.Status || '').toLowerCase())).length;
+    }
+
+    function getWorkFilters() {
+      return {
+        status: document.getElementById('workStatusFilter').value,
+        category: document.getElementById('workCategoryFilter').value,
+        search: document.getElementById('workSearch').value.trim().toLowerCase()
+      };
+    }
+
+    function matchesWorkFilters(record) {
+      const filters = getWorkFilters();
+      if (filters.status !== 'All' && String(record.Status || '') !== filters.status) return false;
+      if (filters.category !== 'All' && String(record.Category || inferClientScheduleCategory(record.Type, record.Title)) !== filters.category) return false;
+      return !filters.search || JSON.stringify(record).toLowerCase().includes(filters.search);
+    }
+
+    function renderActivitiesTable() {
+      const body = document.getElementById('activitiesTableBody');
+      const activities = WORK_ACTIVITIES.filter(matchesWorkFilters).sort((a, b) => String(b.Start_Date || '').localeCompare(String(a.Start_Date || '')));
+      if (!activities.length) {
+        body.innerHTML = '<tr><td colspan="6" class="px-5 py-12 text-center text-xs text-slate-400">No schedules match the current filters.</td></tr>';
+        return;
+      }
+      body.innerHTML = activities.map(activity => {
+        const source = activity.Source_Sheet ? `<div class="mt-1 text-[9px] text-slate-400"><i class="fa-solid fa-link mr-1"></i>${escapeHtml(activity.Source_Sheet)} row ${escapeHtml(activity.Source_Row)}</div>` : '';
+        const location = [activity.Municipality_Province, activity.Meeting_Mode].filter(Boolean).map(escapeHtml).join(' · ');
+        const category = activity.Category || inferClientScheduleCategory(activity.Type, activity.Title);
+        return `<tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+          <td class="px-5 py-4 text-xs whitespace-nowrap"><div class="font-black">${formatWorkDate(activity.Start_Date)}</div><div class="text-[10px] text-slate-400">${activity.End_Date && activity.End_Date !== activity.Start_Date ? 'to ' + formatWorkDate(activity.End_Date) : ''}</div></td>
+          <td class="px-5 py-4"><div class="text-xs font-black text-slate-800 dark:text-slate-100">${escapeHtml(activity.Title)}</div>${source}</td>
+          <td class="px-5 py-4"><span class="text-[9px] uppercase font-black px-2 py-1 rounded-full ${scheduleCategoryClass(category)}">${escapeHtml(category)}</span><div class="text-[10px] text-slate-500 mt-2">${escapeHtml(activity.Type || 'General')}</div></td>
+          <td class="px-5 py-4 text-xs"><div>${location || '—'}</div><div class="text-[10px] text-slate-400 mt-1 max-w-xs truncate">${escapeHtml(activity.Venue || '')}</div></td>
+          <td class="px-5 py-4"><span class="text-[9px] uppercase font-black px-2 py-1 rounded-full ${workStatusClass(activity.Status)}">${escapeHtml(activity.Status || 'Planned')}</span></td>
+          <td class="px-5 py-4 text-right whitespace-nowrap"><button onclick="editActivityById('${activity.ID}')" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg" title="Edit"><i class="fa-solid fa-pen"></i></button><button onclick="deleteActivity('${activity.ID}')" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg" title="Delete"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderTaskCards(type) {
+      const target = document.getElementById(type === 'Team' ? 'teamTaskGrid' : 'personalTaskGrid');
+      target.className = 'p-4 md:p-5 overflow-x-auto';
+      let tasks = WORK_TASKS.filter(task => String(task.Task_Type || 'Personal').toLowerCase() === type.toLowerCase());
+      if (type === 'Personal') tasks = tasks.filter(isPersonalTaskForCurrentUser);
+      tasks = tasks.filter(matchesWorkFilters);
+      const columns = [
+        { status: 'To Do', icon: 'fa-list-check', iconClass: 'text-slate-500' },
+        { status: 'In Progress', icon: 'fa-person-running', iconClass: 'text-blue-500' },
+        { status: 'Blocked', icon: 'fa-triangle-exclamation', iconClass: 'text-red-500' },
+        { status: 'Done', icon: 'fa-circle-check', iconClass: 'text-emerald-500' }
+      ];
+      target.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 min-w-0 xl:min-w-[1100px]">${columns.map(column => {
+        const columnTasks = tasks.filter(task => String(task.Status || 'To Do') === column.status).sort((a, b) => String(a.Due_Date || '9999').localeCompare(String(b.Due_Date || '9999')));
+        return `<section ondragover="event.preventDefault()" ondrop="handleTaskDrop(event,'${column.status}')" class="rounded-2xl bg-slate-100/70 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 min-h-[420px]">
+          <div class="px-4 py-3 flex items-center justify-between border-b dark:border-slate-700"><div class="text-xs font-black"><i class="fa-solid ${column.icon} ${column.iconClass} mr-2"></i>${column.status}</div><span class="text-[10px] font-black bg-white dark:bg-slate-800 px-2 py-1 rounded-full">${columnTasks.length}</span></div>
+          <div class="p-3 space-y-3">${columnTasks.length ? columnTasks.map(task => renderKanbanTaskCard(task)).join('') : '<div class="py-12 text-center text-[10px] text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">Drop tasks here</div>'}</div>
+        </section>`;
+      }).join('')}</div>`;
+    }
+
+    function renderKanbanTaskCard(task) {
+      const priority = String(task.Priority || 'Medium').toLowerCase();
+      const priorityClass = priority === 'urgent' ? 'bg-red-100 text-red-700' : priority === 'high' ? 'bg-orange-100 text-orange-700' : priority === 'low' ? 'bg-slate-100 text-slate-600' : 'bg-blue-100 text-blue-700';
+      const due = parseLocalDate(task.Due_Date);
+      const overdue = due && due < startOfLocalDay(new Date()) && String(task.Status || '').toLowerCase() !== 'done';
+      const subtasks = WORK_SUBTASKS.filter(subtask => subtask.Task_ID === task.ID);
+      const completedSubtasks = subtasks.filter(subtask => String(subtask.Status || '').toLowerCase() === 'done').length;
+      const progress = subtasks.length ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
+      const startedLabel = task.Started_At ? `Started ${formatWorkDate(task.Started_At)}` : (task.Start_Date ? `Planned ${formatWorkDate(task.Start_Date)}` : 'Not started');
+      return `<article draggable="true" ondragstart="handleTaskDragStart(event,'${task.ID}')" class="rounded-xl border dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-sm hover:shadow-md transition cursor-grab active:cursor-grabbing">
+        <div class="flex items-start justify-between gap-2"><span class="text-[8px] uppercase font-black px-2 py-1 rounded-full ${priorityClass}">${escapeHtml(task.Priority || 'Medium')}</span><div class="flex"><button onclick="editTaskById('${task.ID}')" class="w-7 h-7 text-blue-600 hover:bg-blue-50 rounded"><i class="fa-solid fa-pen text-[10px]"></i></button><button onclick="deleteTask('${task.ID}')" class="w-7 h-7 text-red-500 hover:bg-red-50 rounded"><i class="fa-solid fa-trash text-[10px]"></i></button></div></div>
+        <h4 class="font-black text-xs mt-2 text-slate-800 dark:text-white leading-5">${escapeHtml(task.Title)}</h4>
+        ${task.Description ? `<p class="text-[10px] text-slate-500 mt-1 line-clamp-2">${escapeHtml(task.Description)}</p>` : ''}
+        <div class="mt-3 space-y-1.5 text-[9px] text-slate-500">
+          <div class="${overdue ? 'text-red-600 font-black' : ''}"><i class="fa-regular fa-calendar w-4"></i>${task.Due_Date ? 'Due ' + formatWorkDate(task.Due_Date) : 'No due date'}${overdue ? ' · OVERDUE' : ''}</div>
+          <div><i class="fa-solid fa-play w-4"></i>${escapeHtml(startedLabel)}</div>
+          <div><i class="fa-regular fa-user w-4"></i>${escapeHtml(task.Assignee_Name || task.Assignee_Email || 'Unassigned')}</div>
+        </div>
+        <div class="mt-3">
+          <div class="flex justify-between text-[8px] font-black uppercase text-slate-400 mb-1"><span>${subtasks.length ? `${completedSubtasks}/${subtasks.length} subtasks` : 'No subtasks'}</span><span>${subtasks.length ? progress + '%' : ''}</span></div>
+          <div class="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden"><div class="h-full bg-violet-500 rounded-full" style="width:${progress}%"></div></div>
+        </div>
+        <div class="mt-3 pt-3 border-t dark:border-slate-800 flex items-center gap-2">
+          <select onchange="updateTaskStatus('${task.ID}',this.value)" class="min-w-0 flex-1 text-[9px] font-bold border rounded-lg px-2 py-1.5 bg-white dark:bg-slate-800"><option ${task.Status === 'To Do' ? 'selected' : ''}>To Do</option><option ${task.Status === 'In Progress' ? 'selected' : ''}>In Progress</option><option ${task.Status === 'Blocked' ? 'selected' : ''}>Blocked</option><option ${task.Status === 'Done' ? 'selected' : ''}>Done</option></select>
+          ${task.Status === 'To Do' ? `<button onclick="quickStartTask('${task.ID}')" class="px-2 py-1.5 rounded-lg bg-blue-600 text-white text-[9px] font-black">Start</button>` : ''}
+          ${task.Status !== 'Done' ? `<button onclick="quickCompleteTask('${task.ID}')" class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700" title="Mark done"><i class="fa-solid fa-check text-[10px]"></i></button>` : ''}
+        </div>
+      </article>`;
+    }
+
+    function isPersonalTaskForCurrentUser(task) {
+      if (String(task.Task_Type || 'Personal').toLowerCase() !== 'personal') return false;
+      const email = CURRENT_USER && CURRENT_USER.email ? CURRENT_USER.email.toLowerCase() : '';
+      const assignee = String(task.Assignee_Email || '').toLowerCase();
+      const creator = String(task.Created_By || '').toLowerCase();
+      return !assignee || assignee === email || creator === email;
+    }
+
+    function renderWorkCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      const year = calendarCursor.getFullYear();
+      const month = calendarCursor.getMonth();
+      document.getElementById('calendarMonthLabel').innerText = calendarCursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const first = new Date(year, month, 1);
+      const gridStart = new Date(year, month, 1 - first.getDay());
+      const todayKey = dateKey(new Date());
+      const events = buildCalendarEvents();
+      let html = '';
+      for (let index = 0; index < 42; index++) {
+        const day = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + index);
+        const key = dateKey(day);
+        const muted = day.getMonth() !== month;
+        const dayEvents = events[key] || [];
+        html += `<div class="calendar-day border-r border-b border-slate-200 dark:border-slate-700 p-1.5 md:p-2 ${muted ? 'bg-slate-50/60 dark:bg-slate-950/30 text-slate-400' : 'bg-white/50 dark:bg-slate-900/30'} ${key === todayKey ? 'is-today' : ''}">
+          <div class="text-[10px] md:text-xs font-black mb-1">${day.getDate()}</div>
+          <div class="space-y-1">${dayEvents.slice(0, 4).map(event => `<button onclick="openWorkEvent('${event.kind}','${event.id}')" title="${escapeAttr(event.title)}" class="calendar-event block w-full text-left rounded px-1.5 py-1 text-[9px] font-bold ${calendarEventClass(event)}">${escapeHtml(event.title)}</button>`).join('')}${dayEvents.length > 4 ? `<div class="text-[8px] text-slate-400 font-bold">+${dayEvents.length - 4} more</div>` : ''}</div>
+        </div>`;
+      }
+      grid.innerHTML = html;
+    }
+
+    function buildCalendarEvents() {
+      const events = {};
+      const add = (key, event) => { if (!events[key]) events[key] = []; events[key].push(event); };
+      WORK_ACTIVITIES.filter(matchesWorkFilters).forEach(activity => {
+        const start = parseLocalDate(activity.Start_Date);
+        const end = parseLocalDate(activity.End_Date || activity.Start_Date) || start;
+        if (!start) return;
+        let cursor = new Date(start);
+        let guard = 0;
+        while (cursor <= end && guard++ < 32) {
+          add(dateKey(cursor), { kind: 'activity', id: activity.ID, title: activity.Title, category: activity.Category || inferClientScheduleCategory(activity.Type, activity.Title) });
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      });
+      WORK_TASKS.filter(matchesWorkFilters).forEach(task => {
+        if (String(task.Task_Type || 'Personal').toLowerCase() === 'personal' && !isPersonalTaskForCurrentUser(task)) return;
+        const date = parseLocalDate(task.Due_Date || task.Start_Date);
+        if (date) add(dateKey(date), { kind: 'task', id: task.ID, title: task.Title, team: String(task.Task_Type).toLowerCase() === 'team' });
+      });
+      WORK_SUBTASKS.filter(matchesWorkFilters).forEach(subtask => {
+        const parent = WORK_TASKS.find(task => task.ID === subtask.Task_ID);
+        if (!parent) return;
+        if (String(parent.Task_Type || 'Personal').toLowerCase() === 'personal' && !isPersonalTaskForCurrentUser(parent)) return;
+        const date = parseLocalDate(subtask.Due_Date || subtask.Start_Date);
+        if (date) add(dateKey(date), { kind: 'subtask', id: subtask.ID, title: '↳ ' + subtask.Title, team: String(parent.Task_Type).toLowerCase() === 'team' });
+      });
+      WORK_NOTES.filter(matchesWorkFilters).forEach(note => {
+        const date = parseLocalDate(note.Due_Date);
+        if (date) add(dateKey(date), { kind: 'note', id: note.ID, title: note.Title, category: 'Deadline' });
+      });
+      return events;
+    }
+
+    function changeCalendarMonth(offset) {
+      calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + offset, 1);
+      renderWorkCalendar();
+    }
+
+    function goCalendarToday() {
+      calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      renderWorkCalendar();
+    }
+
+    function openWorkEvent(kind, id) {
+      if (kind === 'activity') editActivityById(id);
+      else if (kind === 'note') editNoteById(id);
+      else if (kind === 'subtask') {
+        const subtask = WORK_SUBTASKS.find(item => item.ID === id);
+        if (subtask) editTaskById(subtask.Task_ID);
+      } else editTaskById(id);
+    }
+
+    function openActivityModal(activity = null) {
+      if (!WORK_LOADED) return alert('Open the Work Hub and initialize its database first.');
+      if (WORK_NEEDS_SETUP) return alert('Click “Initialize & Import” first so your existing activity rows are copied safely before new records are added.');
+      const value = (key) => activity ? (activity[key] || '') : '';
+      document.getElementById('activityModalTitle').innerText = activity ? 'Edit Activity' : 'New Activity';
+      document.getElementById('activityId').value = value('ID');
+      document.getElementById('activityTitle').value = value('Title');
+      document.getElementById('activityStart').value = normalizeDateInput(value('Start_Date'));
+      document.getElementById('activityEnd').value = normalizeDateInput(value('End_Date'));
+      document.getElementById('activityCategory').value = value('Category') || inferClientScheduleCategory(value('Type'), value('Title'));
+      document.getElementById('activityType').value = value('Type');
+      document.getElementById('activityStatus').value = value('Status') || 'Planned';
+      document.getElementById('activityQuarter').value = value('Quarter');
+      document.getElementById('activityMonth').value = value('Reporting_Month');
+      document.getElementById('activityLocation').value = value('Municipality_Province');
+      document.getElementById('activityMode').value = value('Meeting_Mode');
+      document.getElementById('activityVenue').value = value('Venue');
+      document.getElementById('activityOwner').value = value('Owner_Email') || (!activity && CURRENT_USER ? CURRENT_USER.email : '');
+      document.getElementById('activityParticipants').value = value('Participants');
+      document.getElementById('activityNotes').value = value('Notes');
+      const source = document.getElementById('activitySourceNote');
+      source.classList.toggle('hidden', !(activity && activity.Source_Sheet));
+      source.innerText = activity && activity.Source_Sheet ? `Imported from ${activity.Source_Sheet}, row ${activity.Source_Row}. The original row remains unchanged.` : '';
+      openModal('modalActivity');
+    }
+
+    function editActivityById(id) {
+      const activity = WORK_ACTIVITIES.find(item => item.ID === id);
+      if (activity) openActivityModal(activity);
+    }
+
+    async function saveActivity(event) {
+      event.preventDefault();
+      const start = document.getElementById('activityStart').value;
+      const end = document.getElementById('activityEnd').value;
+      if (end < start) return alert('End date cannot be before the start date.');
+      const existing = WORK_ACTIVITIES.find(item => item.ID === document.getElementById('activityId').value) || {};
+      const record = {
+        ...existing,
+        ID: document.getElementById('activityId').value,
+        Title: document.getElementById('activityTitle').value.trim(),
+        Start_Date: start, End_Date: end,
+        Category: document.getElementById('activityCategory').value,
+        Type: document.getElementById('activityType').value.trim(),
+        Status: document.getElementById('activityStatus').value,
+        Quarter: document.getElementById('activityQuarter').value,
+        Reporting_Month: document.getElementById('activityMonth').value.trim(),
+        Municipality_Province: document.getElementById('activityLocation').value.trim(),
+        Meeting_Mode: document.getElementById('activityMode').value,
+        Venue: document.getElementById('activityVenue').value.trim(),
+        Owner_Email: document.getElementById('activityOwner').value.trim(),
+        Participants: document.getElementById('activityParticipants').value.trim(),
+        Notes: document.getElementById('activityNotes').value.trim()
+      };
+      await saveWorkRecord('saveActivity', record, 'modalActivity', 'btnSaveActivity');
+    }
+
+    async function deleteActivity(id) {
+      const activity = WORK_ACTIVITIES.find(item => item.ID === id);
+      if (!activity || !confirm(`Delete “${activity.Title}”?\n\nThis is a soft delete; the source spreadsheet row is not removed.`)) return;
+      try {
+        await apiRequest('deleteActivity', { id });
+        WORK_ACTIVITIES = WORK_ACTIVITIES.filter(item => item.ID !== id);
+        renderWorkHub();
+      } catch (error) { alert('Delete failed: ' + error.message); }
+    }
+
+    function renderDocumentsTable() {
+      const body = document.getElementById('documentsTableBody');
+      const documents = WORK_DOCUMENTS.filter(matchesWorkFilters).sort((a, b) => String(b.Event_Date || b.Updated_At || '').localeCompare(String(a.Event_Date || a.Updated_At || '')));
+      if (!documents.length) {
+        body.innerHTML = '<tr><td colspan="5" class="px-5 py-12 text-center text-xs text-slate-400">No documents match the current filters.</td></tr>';
+        return;
+      }
+      body.innerHTML = documents.map(documentRecord => {
+        const draftUrl = safeExternalUrl(documentRecord.Draft_Link);
+        const finalUrl = safeExternalUrl(documentRecord.Final_Link);
+        const source = documentRecord.Source_Sheet ? `<div class="mt-1 text-[9px] text-slate-400"><i class="fa-solid fa-database mr-1"></i>${escapeHtml(documentRecord.Source_Sheet)} row ${escapeHtml(documentRecord.Source_Row)}</div>` : '';
+        const fileLinks = [
+          draftUrl ? `<a href="${escapeAttr(draftUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-[9px] font-black"><i class="fa-solid fa-file-pen"></i>Draft</a>` : '',
+          finalUrl ? `<a href="${escapeAttr(finalUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[9px] font-black"><i class="fa-solid fa-file-circle-check"></i>Final</a>` : ''
+        ].filter(Boolean).join(' ');
+        return `<tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+          <td class="px-5 py-4"><div class="text-xs font-black text-slate-800 dark:text-white">${escapeHtml(documentRecord.Title)}</div><div class="text-[10px] text-slate-500 mt-1">${escapeHtml(documentRecord.Document_Type || 'Document')}${documentRecord.Notes ? ' · ' + escapeHtml(documentRecord.Notes) : ''}</div>${source}</td>
+          <td class="px-5 py-4"><div class="text-xs font-bold">${escapeHtml(documentRecord.Category || 'General')}</div><div class="text-[10px] text-slate-400 mt-1">${escapeHtml(documentRecord.Period || '')}${documentRecord.Event_Date ? ' · ' + formatWorkDate(documentRecord.Event_Date) : ''}</div></td>
+          <td class="px-5 py-4"><span class="text-[9px] uppercase font-black px-2 py-1 rounded-full ${workStatusClass(documentRecord.Status)}">${escapeHtml(documentRecord.Status || 'Draft')}</span></td>
+          <td class="px-5 py-4">${fileLinks || '<span class="text-[10px] text-slate-400">No file link</span>'}</td>
+          <td class="px-5 py-4 text-right whitespace-nowrap"><button onclick="editDocumentById('${escapeAttr(documentRecord.ID)}')" class="w-8 h-8 rounded-lg text-blue-600 hover:bg-blue-50" title="Edit"><i class="fa-solid fa-pen text-[10px]"></i></button><button onclick="deleteDocument('${escapeAttr(documentRecord.ID)}')" class="w-8 h-8 rounded-lg text-red-500 hover:bg-red-50" title="Delete"><i class="fa-solid fa-trash text-[10px]"></i></button></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function openDocumentModal(documentRecord = null) {
+      if (!WORK_LOADED || WORK_NEEDS_SETUP) return alert('Initialize the Work Hub database first.');
+      const value = key => documentRecord ? (documentRecord[key] || '') : '';
+      document.getElementById('documentModalTitle').innerText = documentRecord ? 'Edit Document' : 'New Document';
+      document.getElementById('documentId').value = value('ID');
+      document.getElementById('documentTitle').value = value('Title');
+      document.getElementById('documentType').value = value('Document_Type');
+      document.getElementById('documentCategory').value = value('Category');
+      document.getElementById('documentPeriod').value = value('Period');
+      document.getElementById('documentStatus').value = value('Status') || 'Draft';
+      document.getElementById('documentEventDate').value = normalizeDateInput(value('Event_Date'));
+      document.getElementById('documentVenue').value = value('Venue');
+      document.getElementById('documentDraftLink').value = value('Draft_Link');
+      document.getElementById('documentFinalLink').value = value('Final_Link');
+      document.getElementById('documentNotes').value = value('Notes');
+      openModal('modalDocument');
+    }
+
+    function editDocumentById(id) {
+      const documentRecord = WORK_DOCUMENTS.find(item => item.ID === id);
+      if (documentRecord) openDocumentModal(documentRecord);
+    }
+
+    async function saveDocument(event) {
+      event.preventDefault();
+      const existing = WORK_DOCUMENTS.find(item => item.ID === document.getElementById('documentId').value) || {};
+      const record = {
+        ...existing,
+        ID: document.getElementById('documentId').value,
+        Title: document.getElementById('documentTitle').value.trim(),
+        Document_Type: document.getElementById('documentType').value.trim(),
+        Category: document.getElementById('documentCategory').value.trim(),
+        Period: document.getElementById('documentPeriod').value.trim(),
+        Status: document.getElementById('documentStatus').value,
+        Event_Date: document.getElementById('documentEventDate').value,
+        Venue: document.getElementById('documentVenue').value.trim(),
+        Draft_Link: document.getElementById('documentDraftLink').value.trim(),
+        Final_Link: document.getElementById('documentFinalLink').value.trim(),
+        Notes: document.getElementById('documentNotes').value.trim()
+      };
+      try {
+        const result = await apiRequest('saveDocument', { record });
+        const index = WORK_DOCUMENTS.findIndex(item => item.ID === result.record.ID);
+        if (index >= 0) WORK_DOCUMENTS[index] = result.record; else WORK_DOCUMENTS.push(result.record);
+        closeModal('modalDocument');
+        renderWorkHub();
+      } catch (error) { alert('Document save failed: ' + error.message); }
+    }
+
+    async function deleteDocument(id) {
+      const documentRecord = WORK_DOCUMENTS.find(item => item.ID === id);
+      if (!documentRecord || !confirm(`Delete document “${documentRecord.Title}”?`)) return;
+      try {
+        await apiRequest('deleteDocument', { id });
+        WORK_DOCUMENTS = WORK_DOCUMENTS.filter(item => item.ID !== id);
+        renderWorkHub();
+      } catch (error) { alert('Delete failed: ' + error.message); }
+    }
+
+    function renderNotesGrid() {
+      const target = document.getElementById('notesGrid');
+      const notes = WORK_NOTES.filter(matchesWorkFilters).sort((a, b) => String(a.Due_Date || '9999').localeCompare(String(b.Due_Date || '9999')));
+      if (!notes.length) {
+        target.innerHTML = '<div class="md:col-span-2 xl:col-span-3 py-16 text-center text-xs text-slate-400">No notes match the current filters.</div>';
+        return;
+      }
+      target.innerHTML = notes.map(note => {
+        const related = WORK_DOCUMENTS.find(item => item.ID === note.Related_Document_ID);
+        const due = parseLocalDate(note.Due_Date);
+        const overdue = due && due < startOfLocalDay(new Date()) && !['resolved', 'archived'].includes(String(note.Status || '').toLowerCase());
+        const priority = String(note.Priority || 'Medium').toLowerCase();
+        const priorityClass = priority === 'urgent' ? 'bg-red-100 text-red-700' : priority === 'high' ? 'bg-orange-100 text-orange-700' : priority === 'low' ? 'bg-slate-100 text-slate-600' : 'bg-blue-100 text-blue-700';
+        return `<article class="rounded-2xl border dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm">
+          <div class="flex items-start justify-between gap-3"><div><span class="text-[8px] uppercase font-black px-2 py-1 rounded-full ${priorityClass}">${escapeHtml(note.Priority || 'Medium')}</span><h4 class="font-black text-sm mt-3">${escapeHtml(note.Title)}</h4></div><div class="flex"><button onclick="editNoteById('${escapeAttr(note.ID)}')" class="w-8 h-8 text-blue-600 hover:bg-blue-50 rounded"><i class="fa-solid fa-pen text-[10px]"></i></button><button onclick="deleteNote('${escapeAttr(note.ID)}')" class="w-8 h-8 text-red-500 hover:bg-red-50 rounded"><i class="fa-solid fa-trash text-[10px]"></i></button></div></div>
+          <p class="text-xs text-slate-600 dark:text-slate-300 mt-3 whitespace-pre-line">${escapeHtml(note.Body)}</p>
+          <div class="mt-4 pt-3 border-t dark:border-slate-800 space-y-1.5 text-[10px] text-slate-500"><div><span class="font-black">${escapeHtml(note.Category || 'General')}</span> · <span class="${workStatusClass(note.Status)} px-2 py-0.5 rounded-full">${escapeHtml(note.Status || 'Open')}</span></div><div class="${overdue ? 'text-red-600 font-black' : ''}"><i class="fa-regular fa-calendar w-4"></i>${note.Due_Date ? 'Due ' + formatWorkDate(note.Due_Date) : 'No due date'}${overdue ? ' · OVERDUE' : ''}</div>${related ? `<div><i class="fa-solid fa-paperclip w-4"></i>${escapeHtml(related.Title)}</div>` : ''}</div>
+        </article>`;
+      }).join('');
+    }
+
+    function populateNoteDocumentOptions(selected = '') {
+      const select = document.getElementById('noteDocumentId');
+      select.innerHTML = '<option value="">None</option>' + WORK_DOCUMENTS.slice().sort((a, b) => String(a.Title).localeCompare(String(b.Title))).map(item => `<option value="${escapeAttr(item.ID)}" ${item.ID === selected ? 'selected' : ''}>${escapeHtml(item.Title)}</option>`).join('');
+    }
+
+    function openNoteModal(note = null) {
+      if (!WORK_LOADED || WORK_NEEDS_SETUP) return alert('Initialize the Work Hub database first.');
+      const value = key => note ? (note[key] || '') : '';
+      document.getElementById('noteModalTitle').innerText = note ? 'Edit Note' : 'New Note';
+      document.getElementById('noteId').value = value('ID');
+      document.getElementById('noteTitle').value = value('Title');
+      document.getElementById('noteBody').value = value('Body');
+      document.getElementById('noteCategory').value = value('Category');
+      document.getElementById('noteStatus').value = value('Status') || 'Open';
+      document.getElementById('notePriority').value = value('Priority') || 'Medium';
+      document.getElementById('noteDueDate').value = normalizeDateInput(value('Due_Date'));
+      populateNoteDocumentOptions(value('Related_Document_ID'));
+      openModal('modalNote');
+    }
+
+    function editNoteById(id) {
+      const note = WORK_NOTES.find(item => item.ID === id);
+      if (note) openNoteModal(note);
+    }
+
+    async function saveNote(event) {
+      event.preventDefault();
+      const existing = WORK_NOTES.find(item => item.ID === document.getElementById('noteId').value) || {};
+      const record = {
+        ...existing,
+        ID: document.getElementById('noteId').value,
+        Title: document.getElementById('noteTitle').value.trim(),
+        Body: document.getElementById('noteBody').value.trim(),
+        Category: document.getElementById('noteCategory').value.trim(),
+        Status: document.getElementById('noteStatus').value,
+        Priority: document.getElementById('notePriority').value,
+        Due_Date: document.getElementById('noteDueDate').value,
+        Related_Document_ID: document.getElementById('noteDocumentId').value
+      };
+      try {
+        const result = await apiRequest('saveNote', { record });
+        const index = WORK_NOTES.findIndex(item => item.ID === result.record.ID);
+        if (index >= 0) WORK_NOTES[index] = result.record; else WORK_NOTES.push(result.record);
+        closeModal('modalNote');
+        renderWorkHub();
+      } catch (error) { alert('Note save failed: ' + error.message); }
+    }
+
+    async function deleteNote(id) {
+      const note = WORK_NOTES.find(item => item.ID === id);
+      if (!note || !confirm(`Delete note “${note.Title}”?`)) return;
+      try {
+        await apiRequest('deleteNote', { id });
+        WORK_NOTES = WORK_NOTES.filter(item => item.ID !== id);
+        renderWorkHub();
+      } catch (error) { alert('Delete failed: ' + error.message); }
+    }
+
+    function openTaskModal(type = 'Personal', task = null) {
+      if (!WORK_LOADED) return alert('Open the Work Hub and initialize its database first.');
+      if (WORK_NEEDS_SETUP) return alert('Click “Initialize & Import” first so the clean database tabs are created.');
+      const value = (key) => task ? (task[key] || '') : '';
+      document.getElementById('taskModalTitle').innerText = task ? 'Edit Task' : `New ${type} Task`;
+      document.getElementById('taskId').value = value('ID');
+      document.getElementById('taskType').value = value('Task_Type') || type;
+      document.getElementById('taskStatus').value = value('Status') || 'To Do';
+      document.getElementById('taskTitle').value = value('Title');
+      document.getElementById('taskDescription').value = value('Description');
+      document.getElementById('taskStart').value = normalizeDateInput(value('Start_Date'));
+      document.getElementById('taskDue').value = normalizeDateInput(value('Due_Date'));
+      document.getElementById('taskStartedAt').value = normalizeDateInput(value('Started_At'));
+      document.getElementById('taskCompletedAt').value = normalizeDateInput(value('Completed_At'));
+      document.getElementById('taskPriority').value = value('Priority') || 'Medium';
+      document.getElementById('taskTeam').value = value('Team');
+      document.getElementById('taskAssigneeName').value = value('Assignee_Name') || (!task && CURRENT_USER ? CURRENT_USER.name || '' : '');
+      document.getElementById('taskAssigneeEmail').value = value('Assignee_Email') || (!task && CURRENT_USER ? CURRENT_USER.email : '');
+      populateRelatedActivityOptions(value('Related_Activity_ID'));
+      TASK_DRAFT_SUBTASKS = task ? WORK_SUBTASKS.filter(subtask => subtask.Task_ID === task.ID).map(subtask => ({ ...subtask })) : [];
+      renderTaskDraftSubtasks();
+      openModal('modalTask');
+    }
+
+    function editTaskById(id) {
+      const task = WORK_TASKS.find(item => item.ID === id);
+      if (task) openTaskModal(task.Task_Type || 'Personal', task);
+    }
+
+    function syncTaskAssigneeDefaults() {
+      if (document.getElementById('taskType').value === 'Personal' && !document.getElementById('taskAssigneeEmail').value && CURRENT_USER) {
+        document.getElementById('taskAssigneeEmail').value = CURRENT_USER.email || '';
+        document.getElementById('taskAssigneeName').value = CURRENT_USER.name || '';
+      }
+    }
+
+    function addTaskDraftSubtask() {
+      TASK_DRAFT_SUBTASKS.push({
+        ID: '', Task_ID: document.getElementById('taskId').value || '', Title: '', Status: 'To Do',
+        Start_Date: '', Due_Date: '', Started_At: '', Completed_At: '',
+        Assignee_Email: document.getElementById('taskAssigneeEmail').value || '',
+        Sort_Order: TASK_DRAFT_SUBTASKS.length + 1
+      });
+      renderTaskDraftSubtasks();
+      requestAnimationFrame(() => {
+        const inputs = document.querySelectorAll('#taskSubtaskList input[data-subtask-title]');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+      });
+    }
+
+    function updateTaskDraftSubtask(index, field, value) {
+      if (!TASK_DRAFT_SUBTASKS[index]) return;
+      TASK_DRAFT_SUBTASKS[index][field] = value;
+      if (field === 'Status') {
+        if (value === 'In Progress' && !TASK_DRAFT_SUBTASKS[index].Started_At) TASK_DRAFT_SUBTASKS[index].Started_At = dateKey(new Date());
+        if (value === 'Done' && !TASK_DRAFT_SUBTASKS[index].Completed_At) TASK_DRAFT_SUBTASKS[index].Completed_At = dateKey(new Date());
+        if (value !== 'Done') TASK_DRAFT_SUBTASKS[index].Completed_At = '';
+        renderTaskDraftSubtasks();
+      }
+    }
+
+    function removeTaskDraftSubtask(index) {
+      const subtask = TASK_DRAFT_SUBTASKS[index];
+      if (!subtask) return;
+      if (subtask.ID) subtask._delete = true;
+      else TASK_DRAFT_SUBTASKS.splice(index, 1);
+      renderTaskDraftSubtasks();
+    }
+
+    function renderTaskDraftSubtasks() {
+      const target = document.getElementById('taskSubtaskList');
+      if (!target) return;
+      const visible = TASK_DRAFT_SUBTASKS.map((subtask, index) => ({ subtask, index })).filter(item => !item.subtask._delete);
+      const count = document.getElementById('taskSubtaskCount');
+      if (count) count.innerText = visible.length;
+      if (!visible.length) {
+        target.innerHTML = '<button type="button" onclick="addTaskDraftSubtask()" class="w-full py-3 text-center text-[10px] text-slate-400 hover:text-violet-600 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl transition"><i class="fa-solid fa-plus mr-1"></i>No subtasks yet — add a smaller deliverable</button>';
+        return;
+      }
+      target.innerHTML = visible.map(({ subtask, index }) => `<div class="p-3 rounded-xl border dark:border-slate-700 bg-white dark:bg-slate-900">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+          <label class="md:col-span-5"><span class="block text-[9px] uppercase font-black text-slate-400 mb-1">Subtask title *</span><input data-subtask-title value="${escapeAttr(subtask.Title || '')}" oninput="updateTaskDraftSubtask(${index},'Title',this.value)" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800"></label>
+          <label class="md:col-span-3"><span class="block text-[9px] uppercase font-black text-slate-400 mb-1">Status</span><select onchange="updateTaskDraftSubtask(${index},'Status',this.value)" class="w-full text-xs border rounded-lg px-2 py-2 bg-white dark:bg-slate-800"><option ${subtask.Status === 'To Do' ? 'selected' : ''}>To Do</option><option ${subtask.Status === 'In Progress' ? 'selected' : ''}>In Progress</option><option ${subtask.Status === 'Blocked' ? 'selected' : ''}>Blocked</option><option ${subtask.Status === 'Done' ? 'selected' : ''}>Done</option></select></label>
+          <label class="md:col-span-3"><span class="block text-[9px] uppercase font-black text-slate-400 mb-1">Assignee email</span><input type="email" value="${escapeAttr(subtask.Assignee_Email || '')}" oninput="updateTaskDraftSubtask(${index},'Assignee_Email',this.value)" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800"></label>
+          <button type="button" onclick="removeTaskDraftSubtask(${index})" class="md:col-span-1 h-9 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"><i class="fa-solid fa-trash"></i></button>
+          <label class="md:col-span-3"><span class="block text-[9px] uppercase font-black text-slate-400 mb-1">Planned start</span><input type="date" value="${normalizeDateInput(subtask.Start_Date)}" onchange="updateTaskDraftSubtask(${index},'Start_Date',this.value)" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800"></label>
+          <label class="md:col-span-3"><span class="block text-[9px] uppercase font-black text-slate-400 mb-1">Due date</span><input type="date" value="${normalizeDateInput(subtask.Due_Date)}" onchange="updateTaskDraftSubtask(${index},'Due_Date',this.value)" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800"></label>
+          <label class="md:col-span-3"><span class="block text-[9px] uppercase font-black text-slate-400 mb-1">Actually started</span><input type="date" value="${normalizeDateInput(subtask.Started_At)}" onchange="updateTaskDraftSubtask(${index},'Started_At',this.value)" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800"></label>
+          <label class="md:col-span-3"><span class="block text-[9px] uppercase font-black text-slate-400 mb-1">Completed</span><input type="date" value="${normalizeDateInput(subtask.Completed_At)}" onchange="updateTaskDraftSubtask(${index},'Completed_At',this.value)" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800"></label>
+        </div>
+      </div>`).join('');
+    }
+
+    async function saveTask(event) {
+      event.preventDefault();
+      const start = document.getElementById('taskStart').value;
+      const due = document.getElementById('taskDue').value;
+      if (start && due && due < start) return alert('Due date cannot be before the start date.');
+      for (const subtask of TASK_DRAFT_SUBTASKS.filter(item => !item._delete && String(item.Title || '').trim())) {
+        if (subtask.Start_Date && subtask.Due_Date && subtask.Due_Date < subtask.Start_Date) return alert(`Subtask “${subtask.Title}” has a due date before its planned start date.`);
+      }
+      const existing = WORK_TASKS.find(item => item.ID === document.getElementById('taskId').value) || {};
+      const status = document.getElementById('taskStatus').value;
+      let startedAt = document.getElementById('taskStartedAt').value;
+      let completedAt = document.getElementById('taskCompletedAt').value;
+      if (['In Progress', 'Done'].includes(status) && !startedAt) startedAt = dateKey(new Date());
+      if (status === 'Done' && !completedAt) completedAt = dateKey(new Date());
+      if (status !== 'Done') completedAt = '';
+      const record = {
+        ...existing,
+        ID: document.getElementById('taskId').value,
+        Task_Type: document.getElementById('taskType').value,
+        Status: status,
+        Title: document.getElementById('taskTitle').value.trim(),
+        Description: document.getElementById('taskDescription').value.trim(),
+        Start_Date: start, Due_Date: due,
+        Started_At: startedAt, Completed_At: completedAt,
+        Priority: document.getElementById('taskPriority').value,
+        Team: document.getElementById('taskTeam').value.trim(),
+        Assignee_Name: document.getElementById('taskAssigneeName').value.trim(),
+        Assignee_Email: document.getElementById('taskAssigneeEmail').value.trim(),
+        Related_Activity_ID: document.getElementById('taskRelatedActivity').value
+      };
+      const button = document.getElementById('btnSaveTask');
+      const original = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Saving task...';
+      try {
+        const taskResult = await apiRequest('saveTask', { record });
+        const taskIndex = WORK_TASKS.findIndex(item => item.ID === taskResult.record.ID);
+        if (taskIndex >= 0) WORK_TASKS[taskIndex] = taskResult.record; else WORK_TASKS.push(taskResult.record);
+
+        for (const draft of TASK_DRAFT_SUBTASKS) {
+          if (draft._delete) {
+            if (draft.ID) await apiRequest('deleteSubtask', { id: draft.ID });
+            WORK_SUBTASKS = WORK_SUBTASKS.filter(item => item.ID !== draft.ID);
+            continue;
+          }
+          if (!String(draft.Title || '').trim()) continue;
+          const subtaskResult = await apiRequest('saveSubtask', { record: { ...draft, Task_ID: taskResult.record.ID, Title: String(draft.Title).trim() } });
+          const subtaskIndex = WORK_SUBTASKS.findIndex(item => item.ID === subtaskResult.record.ID);
+          if (subtaskIndex >= 0) WORK_SUBTASKS[subtaskIndex] = subtaskResult.record; else WORK_SUBTASKS.push(subtaskResult.record);
+        }
+        closeModal('modalTask');
+        renderWorkHub();
+      } catch (error) {
+        alert('Task save failed: ' + error.message);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = original;
+      }
+    }
+
+    async function saveWorkRecord(action, record, modalId, buttonId) {
+      const button = document.getElementById(buttonId);
+      const original = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Saving...';
+      try {
+        const result = await apiRequest(action, { record });
+        if (action === 'saveActivity') {
+          const index = WORK_ACTIVITIES.findIndex(item => item.ID === result.record.ID);
+          if (index >= 0) WORK_ACTIVITIES[index] = result.record; else WORK_ACTIVITIES.push(result.record);
+        } else {
+          const index = WORK_TASKS.findIndex(item => item.ID === result.record.ID);
+          if (index >= 0) WORK_TASKS[index] = result.record; else WORK_TASKS.push(result.record);
+        }
+        closeModal(modalId);
+        renderWorkHub();
+      } catch (error) {
+        alert('Save failed: ' + error.message);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = original;
+      }
+    }
+
+    async function quickCompleteTask(id) {
+      return updateTaskStatus(id, 'Done');
+    }
+
+    async function quickStartTask(id) {
+      return updateTaskStatus(id, 'In Progress');
+    }
+
+    async function updateTaskStatus(id, status) {
+      const task = WORK_TASKS.find(item => item.ID === id);
+      if (!task || task.Status === status) return;
+      const now = new Date().toISOString();
+      const update = { ...task, Status: status };
+      if (['In Progress', 'Done'].includes(status) && !update.Started_At) update.Started_At = now;
+      if (status === 'Done') update.Completed_At = update.Completed_At || now;
+      else update.Completed_At = '';
+      try {
+        const result = await apiRequest('saveTask', { record: update });
+        WORK_TASKS[WORK_TASKS.findIndex(item => item.ID === id)] = result.record;
+        renderWorkHub();
+      } catch (error) { alert('Task status update failed: ' + error.message); }
+    }
+
+    function handleTaskDragStart(event, id) {
+      event.dataTransfer.setData('text/plain', id);
+      event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleTaskDrop(event, status) {
+      event.preventDefault();
+      const id = event.dataTransfer.getData('text/plain');
+      if (id) updateTaskStatus(id, status);
+    }
+
+    async function deleteTask(id) {
+      const task = WORK_TASKS.find(item => item.ID === id);
+      if (!task || !confirm(`Delete task “${task.Title}”?`)) return;
+      try {
+        await apiRequest('deleteTask', { id });
+        WORK_TASKS = WORK_TASKS.filter(item => item.ID !== id);
+        WORK_SUBTASKS = WORK_SUBTASKS.filter(item => item.Task_ID !== id);
+        renderWorkHub();
+      } catch (error) { alert('Delete failed: ' + error.message); }
+    }
+
+    function populateRelatedActivityOptions(selected = null) {
+      const select = document.getElementById('taskRelatedActivity');
+      if (!select) return;
+      const current = selected === null ? select.value : selected;
+      select.innerHTML = '<option value="">None</option>' + WORK_ACTIVITIES
+        .slice().sort((a, b) => String(a.Title).localeCompare(String(b.Title)))
+        .map(activity => `<option value="${escapeAttr(activity.ID)}" ${activity.ID === current ? 'selected' : ''}>${escapeHtml(activity.Title)}</option>`).join('');
+    }
+
+    function workStatusClass(status) {
+      const value = String(status || '').toLowerCase();
+      if (['completed', 'done', 'resolved'].includes(value)) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+      if (['ongoing', 'in progress', 'for review'].includes(value)) return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
+      if (['cancelled', 'blocked', 'archived'].includes(value)) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+    }
+
+    function inferClientScheduleCategory(type, title) {
+      const text = `${type || ''} ${title || ''}`.toLowerCase();
+      if (/training|orientation|workshop|onboarding|refresher/.test(text)) return 'Training';
+      if (/meeting|coordination|conference|consultation/.test(text)) return 'Meeting';
+      if (/event|caravan|summit|launch|ceremony/.test(text)) return 'Event';
+      if (/deadline|due|submission|renewal/.test(text)) return 'Deadline';
+      if (/activity|engagement|assistance|validation|monitoring/.test(text)) return 'Activity';
+      return 'Other';
+    }
+
+    function scheduleCategoryClass(category) {
+      const value = String(category || '').toLowerCase();
+      if (value === 'training') return 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200';
+      if (value === 'event') return 'bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-200';
+      if (value === 'meeting') return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-200';
+      if (value === 'deadline') return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200';
+      if (value === 'activity') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200';
+      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
+    }
+
+    function calendarEventClass(event) {
+      if (event.kind === 'activity' || event.kind === 'note') return scheduleCategoryClass(event.category);
+      if (event.kind === 'subtask') return event.team ? 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200';
+      return event.team ? 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200';
+    }
+
+    function safeExternalUrl(value) {
+      if (!value) return '';
+      try {
+        const url = new URL(String(value));
+        return ['https:', 'http:'].includes(url.protocol) ? url.href : '';
+      } catch (error) { return ''; }
+    }
+
+    function parseLocalDate(value) {
+      if (!value) return null;
+      const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? null : startOfLocalDay(date);
+    }
+
+    function startOfLocalDay(date) { return new Date(date.getFullYear(), date.getMonth(), date.getDate()); }
+    function dateKey(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
+    function normalizeDateInput(value) { const date = parseLocalDate(value); return date ? dateKey(date) : ''; }
+    function formatWorkDate(value) { const date = parseLocalDate(value); return date ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'; }
+    function escapeHtml(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
+    function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#096;'); }
 
     function populateYearFilter() { 
         const years = new Set(); 
@@ -1472,32 +2727,94 @@ USER QUESTION: ${txt}`;
     }
 
     function openEditModal(idx) { const d = LIVE_DB[idx]; if (!d) return; const cont = document.getElementById('dynamicInputs'); cont.innerHTML = `<input type="hidden" id="editIdLock" value="${d.ID}">`; for (const [sectionName, fields] of Object.entries(EDIT_FORM_CONFIG)) { let sectionHtml = `<div class="font-black text-xs text-slate-800 dark:text-white mt-6 mb-3 pb-1 border-b-2 border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-800 z-10 pt-2">${sectionName}</div><div class="grid grid-cols-1 gap-3">`; fields.forEach(fieldConfig => { if (fieldConfig.type === "hidden") return; const { key: actualKey, value: actualValue } = findValueInRow(d._raw, fieldConfig.keys); const targetKey = actualKey || fieldConfig.keys[0]; const safeVal = String(actualValue || "").trim(); let inputHtml = ""; const isDate = fieldConfig.label.includes("Date") || fieldConfig.type === "date"; if (fieldConfig.type === "locked") { inputHtml = `<input type="text" data-key="${targetKey}" value="${safeVal}" readonly class="w-full text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed opacity-75">`; } else if (fieldConfig.type === "select") { const optionsKey = fieldConfig.options; const optionsList = DROPDOWN_OPTIONS[optionsKey] || []; const optionsHtml = optionsList.map(opt => `<option value="${opt}" ${safeVal.toUpperCase() === opt.toUpperCase() ? 'selected' : ''}>${opt}</option>`).join(''); inputHtml = `<select data-key="${targetKey}" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500">${optionsHtml}</select>`; } else if (isDate) { let dateVal = safeVal; const dateObj = new Date(safeVal); if (safeVal && safeVal.length > 5 && !isNaN(dateObj.getTime())) { try { const offset = dateObj.getTimezoneOffset() * 60000; const localISODate = new Date(dateObj.getTime() - offset).toISOString().split('T')[0]; dateVal = localISODate; } catch(e){} } inputHtml = `<input type="date" data-key="${targetKey}" value="${dateVal}" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500 text-slate-600">`; } else { inputHtml = `<input type="text" data-key="${targetKey}" value="${safeVal}" class="w-full text-xs border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 outline-none focus:ring-2 ring-blue-500">`; } sectionHtml += `<div><label class="block text-[10px] font-black text-slate-500 uppercase mb-1">${fieldConfig.label}</label>${inputHtml}</div>`; }); sectionHtml += `</div>`; cont.innerHTML += sectionHtml; } openModal('modalEdit'); }
-    function saveSettings() {
+    async function saveSettings() {
       const errEl = document.getElementById('settingsError');
       errEl.classList.add('hidden');
       const encrypted = document.getElementById('apiUrlEncrypted').value.trim();
       const key = document.getElementById('decryptKey').value.trim();
       if (!encrypted || !key) { errEl.innerText = 'Encrypted URL and key are required.'; errEl.classList.remove('hidden'); return; }
       const decrypted = decryptUrl(encrypted, key);
-      if (!decrypted || !decrypted.startsWith('http')) { errEl.innerText = 'Decryption failed. Wrong key or invalid encrypted URL.'; errEl.classList.remove('hidden'); return; }
-      localStorage.setItem('elgu_api_url', decrypted);
-      API_URL = decrypted;
-      toggleSettings();
-      initData();
-      checkVersion();
-      setInterval(() => { if (!snapshotMode && (!compareState || document.getElementById('compareBanner').classList.contains('hidden'))) fetchLiveData(); }, 30000);
+      if (!isAllowedAppsScriptUrl(decrypted)) { errEl.innerText = 'Decryption failed or the URL is not a deployed Google Apps Script web app ending in /exec.'; errEl.classList.remove('hidden'); return; }
+      if (LOCAL_AUTH_BYPASS) {
+        LOCAL_CONNECTION_KEY = key;
+        try { sessionStorage.setItem('elgu_local_connection_key', key); } catch (error) {}
+        try { localStorage.setItem('elgu_local_connection_key', key); } catch (error) {}
+      }
+      showLoading('Verifying connection...');
+      try {
+        if (!LOCAL_AUTH_BYPASS) {
+          const response = await fetch(decrypted, { method: 'POST', body: JSON.stringify({ action: 'verifyToken', token: CURRENT_TOKEN, appId: 'DICT' }) });
+          const result = await readJsonResponse(response, 'Apps Script');
+          if (result.status !== 'success') throw new Error(result.message || 'Identity verification failed.');
+        }
+        localStorage.setItem('elgu_api_url', decrypted);
+        API_URL = decrypted;
+        toggleSettings();
+        await initData();
+        checkVersion();
+        startRefreshTimer();
+      } catch (error) {
+        errEl.innerText = 'Connection failed: ' + error.message;
+        errEl.classList.remove('hidden');
+      } finally {
+        hideLoading();
+      }
     }
-    async function saveLGU() { const btn = document.getElementById('btnSaveLGU'); btn.innerText = 'SAVING...'; const updates = {}; const inputs = document.querySelectorAll('#dynamicInputs [data-key]'); inputs.forEach(i => { updates[i.getAttribute('data-key')] = i.value; }); const idInput = document.querySelector('#dynamicInputs input[type="hidden"]'); const id = idInput ? idInput.value : null; if(!id) { alert('Error: Record ID missing. Please reload.'); btn.innerText = 'Save Changes'; return; } const idx = LIVE_DB.findIndex(x => x.ID === id); if (idx !== -1) { Object.keys(updates).forEach(k => { LIVE_DB[idx]._raw[k] = updates[k]; }); const newNorm = normalizeData([LIVE_DB[idx]._raw])[0]; LIVE_DB[idx] = newNorm; } try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateLGU', id: id, updates: updates }) }); alert('Saved Successfully!'); } catch (e) { alert('Saved (Offline Simulation)'); } closeModal('modalEdit'); applyFilters(); updateStats(); renderCharts(); btn.innerText = 'Save Changes'; }
-    function fetchHistoryList() { return fetch(`${API_URL}?action=getHistoryDates`).then(r => r.json()).then(l => { const opts = l.map(i => `<option value="${i.name}">${i.name}</option>`).join(''); ['compareA', 'compareB'].forEach(id => { document.getElementById(id).innerHTML = `<option value="live">Live Data</option>` + opts; }); document.getElementById('historyList').innerHTML = l.map(i => `<tr><td class="p-3 font-black">${i.name}</td><td class="p-3 text-slate-400 font-mono text-[10px]">${i.timestamp || ''}</td><td class="p-3 text-right"><button onclick="loadSnapshot('${escapeQuotes(i.name)}')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border text-[10px] font-black hover:bg-slate-50 dark:hover:bg-slate-700 transition">Load</button></td></tr>`).join(''); }).catch(e => console.error("History fetch error:", e)); }
-    async function loadSnapshot(name) { try { showLoading(`Loading ${name}...`); closeModal('modalHistory'); const raw = await (await fetch(`${API_URL}?action=getHistoryData&date=${encodeURIComponent(name)}`)).json(); snapshotMode = true; compareState = null; document.getElementById('compareBanner').classList.add('hidden'); CURRENT_VIEW_DB = normalizeData(raw); renderDashboard(); if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { if (!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); } document.getElementById('statusIndicator').classList.remove('hidden'); document.getElementById('statusText').innerText = 'Snapshot'; document.getElementById('snapshotBanner').classList.remove('hidden'); document.getElementById('snapshotName').innerText = name; hideLoading(); } catch (e) { hideLoading(); alert('Failed to load snapshot.'); } }
+    async function saveLGU() {
+      const btn = document.getElementById('btnSaveLGU');
+      const original = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = 'SAVING...';
+      const updates = {};
+      document.querySelectorAll('#dynamicInputs [data-key]').forEach(input => { updates[input.getAttribute('data-key')] = input.value; });
+      const idInput = document.querySelector('#dynamicInputs input[type="hidden"]');
+      const id = idInput ? idInput.value : null;
+      if (!id) {
+        alert('Error: Record ID missing. Please reload.');
+        btn.disabled = false;
+        btn.innerText = original;
+        return;
+      }
+      try {
+        await apiRequest('updateLGU', { id, updates });
+        const index = LIVE_DB.findIndex(item => item.ID === id);
+        if (index >= 0) {
+          Object.keys(updates).forEach(key => { LIVE_DB[index]._raw[key] = updates[key]; });
+          LIVE_DB[index] = normalizeData([LIVE_DB[index]._raw])[0];
+        }
+        closeModal('modalEdit');
+        CURRENT_VIEW_DB = activeFilter === 'All' ? LIVE_DB : LIVE_DB.filter(item => item.Province === activeFilter);
+        renderDashboard();
+        alert('Changes saved to Google Sheets.');
+      } catch (error) {
+        alert('Save failed: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = original;
+      }
+    }
+    function fetchHistoryList() { return apiRequest('getHistoryDates').then(l => { const opts = l.map(i => `<option value="${escapeAttr(i.name)}">${escapeHtml(i.name)}</option>`).join(''); ['compareA', 'compareB'].forEach(id => { document.getElementById(id).innerHTML = `<option value="live">Live Data</option>` + opts; }); document.getElementById('historyList').innerHTML = l.map(i => `<tr><td class="p-3 font-black">${escapeHtml(i.name)}</td><td class="p-3 text-slate-400 font-mono text-[10px]">${escapeHtml(i.timestamp || '')}</td><td class="p-3 text-right"><button onclick="loadSnapshot('${escapeQuotes(i.name)}')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border text-[10px] font-black hover:bg-slate-50 dark:hover:bg-slate-700 transition">Load</button></td></tr>`).join(''); }).catch(e => console.error("History fetch error:", e)); }
+    async function loadSnapshot(name) { try { showLoading(`Loading ${name}...`); closeModal('modalHistory'); const raw = await apiRequest('getHistoryData', { date: name }); snapshotMode = true; compareState = null; document.getElementById('compareBanner').classList.add('hidden'); CURRENT_VIEW_DB = normalizeData(raw); renderDashboard(); if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { if (!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); } document.getElementById('statusIndicator').classList.remove('hidden'); document.getElementById('statusText').innerText = 'Snapshot'; document.getElementById('snapshotBanner').classList.remove('hidden'); document.getElementById('snapshotName').innerText = name; hideLoading(); } catch (e) { hideLoading(); alert('Failed to load snapshot: ' + e.message); } }
     function exitSnapshotMode() { snapshotMode = false; document.getElementById('snapshotBanner').classList.add('hidden'); CURRENT_VIEW_DB = LIVE_DB; renderDashboard(); if (document.getElementById('view-map') && !document.getElementById('view-map').classList.contains('hidden')) { if (!map) initMap(); else renderMapMarkers(CURRENT_VIEW_DB); } document.getElementById('statusText').innerText = 'Live'; }
-    async function saveSnapshot() { const n = prompt("Report Name:"); if (!n) return; showLoading('Saving Snapshot...'); await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSnapshot', reportName: n, data: LIVE_DB.map(d => d._raw) }) }); hideLoading(); fetchHistoryList(); }
+    async function saveSnapshot() {
+      const name = prompt('Report Name:');
+      if (!name) return;
+      showLoading('Saving Snapshot...');
+      try {
+        await apiRequest('saveSnapshot', { reportName: name, data: LIVE_DB.map(item => item._raw) });
+        await fetchHistoryList();
+      } catch (error) {
+        alert('Snapshot could not be saved: ' + error.message);
+      } finally {
+        hideLoading();
+      }
+    }
     function exportChangedCSV() { if (!compareState || !compareState.changedRows.length) return alert('No changes.'); const rows = compareState.changedRows; const csv = ['Municipality,Province,Old Status,New Status', ...rows.map(r => [r.Municipality, r.Province, r.oldStatus, r.newStatus].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','))].join('\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `diff_${compareState.A}_vs_${compareState.B}.csv`; a.click(); }
     
     async function runComparison() {
       const A = document.getElementById('compareA').value; const B = document.getElementById('compareB').value;
       closeModal('modalHistory'); showLoading('Comparing...');
-      const getD = async (v) => v === 'live' ? LIVE_DB : normalizeData(await (await fetch(`${API_URL}?action=getHistoryData&date=${encodeURIComponent(v)}`)).json());
+      const getD = async (v) => v === 'live' ? LIVE_DB : normalizeData(await apiRequest('getHistoryData', { date: v }));
       const dA = await getD(A); const dB = await getD(B);
       const mapA = new Map(dA.map(x => [x.Municipality, x]));
       const changed = [];
@@ -1677,8 +2994,8 @@ USER QUESTION: ${txt}`;
       const btn = document.getElementById(`btn-${t}`);
       if (btn) btn.classList.add('active');
       if (t === 'map') initMap();
+      if (t === 'work' && !WORK_LOADED) loadWorkData(true);
       if (t === 'logs') fetchLogs();
-      sendLog('VIEW', `Tab: ${t}`);
     }
     function sortData(col) { if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; } resetPg(); applyFilters(); }
     function changePg(dir) { curPage += dir; if (curPage < 1) curPage = 1; applyFilters(); }
@@ -1718,9 +3035,7 @@ USER QUESTION: ${txt}`;
       const tbody = document.getElementById('logsTableBody');
       tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading...</td></tr>';
       try {
-        const res = await fetch(`${API_URL}?action=getLogs`);
-        ALL_LOGS = await res.json();
-        sendLog('VIEW_LOGS', 'Viewed activity logs');
+        ALL_LOGS = await apiRequest('getLogs');
         renderLogsTable(ALL_LOGS);
       } catch (e) {
         tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-red-400 text-xs">Failed to load logs.</td></tr>';
@@ -1735,11 +3050,11 @@ USER QUESTION: ${txt}`;
       tbody.innerHTML = logs.map(l => {
         const tc = typeColors[l.type] || 'text-slate-500 bg-slate-100';
         return `<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition">
-          <td class="px-4 py-3 font-mono text-[10px] text-slate-500 whitespace-nowrap">${l.timestamp || '-'}</td>
-          <td class="px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200">${l.email || '-'}</td>
-          <td class="px-4 py-3 text-[10px] font-black uppercase text-slate-400">${l.app || '-'}</td>
-          <td class="px-4 py-3"><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded ${tc}">${l.type || '-'}</span></td>
-          <td class="px-4 py-3 text-[10px] text-slate-500 max-w-xs truncate">${l.detail || '-'}</td>
+          <td class="px-4 py-3 font-mono text-[10px] text-slate-500 whitespace-nowrap">${escapeHtml(l.timestamp || '-')}</td>
+          <td class="px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200">${escapeHtml(l.email || '-')}</td>
+          <td class="px-4 py-3 text-[10px] font-black uppercase text-slate-400">${escapeHtml(l.app || '-')}</td>
+          <td class="px-4 py-3"><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded ${tc}">${escapeHtml(l.type || '-')}</span></td>
+          <td class="px-4 py-3 text-[10px] text-slate-500 max-w-xs truncate">${escapeHtml(l.detail || '-')}</td>
         </tr>`;
       }).join('');
     }
